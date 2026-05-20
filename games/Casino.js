@@ -1,6 +1,6 @@
 /*
-@title: Casino
-@description: An optimized casino arcade with slots, cards, wheel, blackjack, roulette, and bingo.
+@title: Gambling Casino
+@description: a gambling casino with 6 games in one: slots, high low card game, spin wheel, blackjack, roulette and bingo. it has dynamic bet and winning system and good economy, and universal jackpot
 @author: ssoggytacoman
 @tags: ['game', 'casino']
 @addedOn: 2026-05-20
