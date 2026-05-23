@@ -40,3 +40,5 @@
 note: I used AI for some backend stuff like mostly the math/economy/odds since im bad at math and too lazy to do it
 
 game location: https://github.com/SSoggyTacoMan/sprig/blob/3338334157c40f9ab74987385ec4740a76aa0e96/games/GamblingCasino.js
+
+also btw pls don't actually go gambling irl, it's a waste of money, this game is just for fun
