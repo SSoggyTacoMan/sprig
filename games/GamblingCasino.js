@@ -1,3 +1,4 @@
+/* eslint-disable no-floating-decimal, no-lonely-if, no-negated-condition, no-nested-ternary, prefer-optional-chain */
 /*
 @title: Gambling Casino
 @description: a gambling casino with 6 games in one: slots, high low card game, spin wheel, blackjack, roulette and bingo. it has dynamic bet and winning system and good economy, and universal jackpot
@@ -5,6 +6,50 @@
 @tags: ['game', 'casino']
 @addedOn: 2026-05-20
 */
+const PlayerState = {
+  bank: 150, jackpot: 0, debt: 0, sharkDeadline: 0, sharkDealType: 0, offeredDeal: 0,
+  vipMode: false, vipTier: 0, lastStake: 0, lastStakeAllIn: false, heat: 0
+};
+
+const UIState = {
+  state: "title", tick: 0, fx: 0, resultText: "", resultGood: false, lastGame: "none",
+  pendingWin: 0, pendingText: "", pendingBig: false, justRisked: false, introFx: 0, moreMenu: false,
+  sawCasinoNotif: false
+};
+
+const RRState = {
+  bullet: 0, pulls: 0, winnings: 0, animTicks: 0, animTimer: null, animResult: false, spinOffset: 0
+};
+
+const SlotState = {
+  reels: ['c', 'l', 's'], finalReels: ['c', 'l', 's'], timer: null, autoSpin: false
+};
+
+const CardState = {
+  current: 5, next: 5, ready: false, lastStart: 0, lastNext: 0, timer: null
+};
+
+const WheelState = {
+  index: 0, steps: 0, final: 0, delay: 0, cursor: null, timer: null, autoSpin: false
+};
+
+const ShopState = {
+  cursor: 0, msg: "", page: 0, cachedItems: null,
+  upgrades: {
+    autoSpin: false, autoSpinWheel: false, hotWheel: false, luckyCoin: false,
+    sparkMagnet: false, cardShark: false, autoRoul: false, autoRoulOn: false, hyperDrive: false,
+    bingoHacker: false, insurance: false
+  }
+};
+
+const BingoState = {
+  card: [], marks: [], balls: [], started: false, done: false, msg: "",
+  last: 0, c: 0, r: 0, bad: 0, timer: null, drawing: false
+};
+
+const TimerState = {
+  roulette: null, fx: null, transition: null, title: null
+};
 const bg = "x";
 const chip = "h", skull = "z", spark = "g", wheelIcon = "r", cursorMark = "Y";
 const cherry = "c", lemon = "l", bell = "e", bar = "b", seven = "s", wild = "w";
@@ -1819,29 +1864,48 @@ const blankMap = map`
 ..........`;
 setMap(blankMap);
 let bgmPlayback = null, bgmTimer = null;
-let bank = 150, jackpot = randJackpot(), debt = 0, sharkDeadline = 0;
-let sharkDealType = 0, rrBullet = 0, rrPulls = 0, rrWinnings = 0;
-let rrAnimTicks = 0, rrAnimTimer = null, rrAnimResult = false;
-let rrSpinOffset = 0;
-let offeredDeal = 0;
-let state = "title";
-let reels = [cherry, lemon, seven], finalReels = [cherry, lemon, seven];
-let currentCard = 5, nextCard = 5, cardReady = false;
-let lastStartCard = 0, lastNextCard = 0;
-let wheelIndex = 0, wheelSteps = 0, wheelFinal = 0, wheelDelay = 0, wheelCursor = null;
-let slotTimer = null, cardTimer = null, wheelTimer = null, rouletteTimer = null, fxTimer = null, transitionTimer = null, titleTimer = null;
-let tick = 0, lastStake = 0, lastStakeAllIn = false, heat = 0, fx = 0;
-let resultText = "", resultGood = false, lastGame = "none";
-let vipMode = false, autoSpinSlot = false, loanInterest = 5, loanPrincipal = 1000;
-let pendingWin = 0, pendingText = "", pendingBig = false, justRisked = false;
-let introFx = 0, moreMenu = false;
+let lastRouBets = [];
+let hyperMode = false;
+function getShopItems() {
+  if (ShopState.cachedItems) return ShopState.cachedItems;
+  const items = [
+    { name: "AUTO-SLOT", cost: 5000, type: "auto", getOwned: () => ShopState.upgrades.autoSpin },
+    { name: "AUTO-WHEEL", cost: 7500, type: "autoWheel", getOwned: () => ShopState.upgrades.autoSpinWheel }
+  ];
+  if (PlayerState.vipTier < 5) {
+    const costs = [50000, 200000, 1000000, 5000000, 25000000];
+    items.push({ name: "VIP TIER " + (PlayerState.vipTier + 1), cost: costs[PlayerState.vipTier], type: "vip", getOwned: () => false });
+  } else {
+    items.push({ name: "VIP MAX", cost: 0, type: "vip", getOwned: () => true });
+  }
+  items.push(
+    { name: "HOT WHEEL", cost: 15000, type: "hot", getOwned: () => ShopState.upgrades.hotWheel },
+    { name: "LUCKY COIN", cost: 100000, type: "luckyCoin", getOwned: () => ShopState.upgrades.luckyCoin },
+    { name: "CARD SHARK", cost: 150000, type: "cardShark", getOwned: () => ShopState.upgrades.cardShark },
+    { name: "SPARK MAGNET", cost: 250000, type: "sparkMagnet", getOwned: () => ShopState.upgrades.sparkMagnet },
+    { name: "AUTO-ROULETTE", cost: 50000, type: "autoRoul", getOwned: () => ShopState.upgrades.autoRoul },
+    { name: "INSURANCE", cost: 500000, type: "insurance", getOwned: () => ShopState.upgrades.insurance },
+    { name: "HYPER DRIVE", cost: 1000000, type: "hyperDrive", getOwned: () => ShopState.upgrades.hyperDrive },
+    { name: "BINGO HACKER", cost: 2500000, type: "bingoHacker", getOwned: () => ShopState.upgrades.bingoHacker },
+    { name: "BUY CASINO", cost: 5000000, type: "win", getOwned: () => false }
+  );
+  
+  if (PlayerState.debt > 0) {
+    items.unshift({ name: "PAY DEBT", cost: PlayerState.debt, type: "debt", getOwned: () => false });
+  } else {
+    items.push({ name: "PAY DEBT", cost: PlayerState.debt, type: "debt", getOwned: () => false });
+  }
+  ShopState.cachedItems = items;
+  return items;
+}
+function invalidateShopCache() {
+  ShopState.cachedItems = null;
+}
 let bjPlayer = [], bjDealer = [], bjActive = false, bjDone = false, bjDealerHidden = false, bjDealing = false, bjMsg = "";
 let bjPlayer2 = [], bjActive2 = false, bjCurrentHand = 1, bjSplitStake = 0;
 const rouTypes = ["RED", "BLACK", "ODD", "EVEN", "LOW", "HIGH", "1-12", "13-24", "25-36", "NUM"];
 let rouBets = [];
 let rouTypeIndex = 0, rouPick = 7, rouResult = 0, rouMsg = "", rouColor = "RED", rouSpinFrame = 0;
-let bingoCard = [], bingoMarks = [], bingoBalls = [], bingoStarted = false, bingoDone = false, bingoMsg = "", bingoLast = 0, bingoBad = 0;
-let bingoC = 0, bingoR = 0, bingoDrawing = false, bingoTimer = null;
 const wheelPos = [[4, 2], [5, 2], [6, 3], [6, 4], [5, 5], [4, 5], [3, 4], [3, 3]];
 let wheel = [], wheelMode = "safe", wheelBoost = 1, wheelBoosting = false;
 let wheelBoards = { safe: null, hot: null }, wheelBoardIndexes = { safe: 0, hot: 0 };
@@ -1877,8 +1941,8 @@ function wheelWeightForMult(mult) {
   if (mult <= 10) return 2;
   return 1;
 }
-const BGM_STATES = ["title", "lobby", "slot", "slotChoice", "card", "wheel", "blackjack", "roulette", "bingo"];
-const BET_STATES = ["lobby", "slot", "wheel"];
+const BGM_STATES = new Set(["title", "lobby", "slot", "slotChoice", "card", "wheel", "blackjack", "roulette", "bingo"]);
+const BET_STATES = new Set(["lobby", "slot", "wheel"]);
 const STAKE_TIERS = [
   [5, [1, 2, 3 ,"ALL"]], 
   [15, [1, 2, 5, 10, "ALL"]], 
@@ -1900,26 +1964,26 @@ const SLOT_TRIPLES = [[seven, "JACKPOT", 0, 3, true], [bar, "BAR", 20, 2, true],
 function randInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
 function randJackpot() { return randInt(450, 850);
 }
-function resetJackpot() { jackpot = randJackpot(); }
+function resetJackpot() { PlayerState.jackpot = randJackpot(); }
 function feedJackpotByBet(gameState, amount) {
-  if (gameState === "slot") jackpot += Math.max(3, Math.floor(amount * 0.12));
-  else if (gameState === "wheel") jackpot += Math.max(2, Math.floor(amount * 0.08));
-  else if (gameState === "card" || gameState === "blackjack") jackpot += Math.max(1, Math.floor(amount * 0.05));
-  else if (gameState === "roulette") jackpot += Math.max(1, Math.floor(amount * 0.06));
-  else if (gameState === "bingo") jackpot += Math.max(1, Math.floor(amount * 0.03));
+  if (gameState === "slot") PlayerState.jackpot += Math.max(3, Math.floor(amount * 0.12));
+  else if (gameState === "wheel") PlayerState.jackpot += Math.max(2, Math.floor(amount * 0.08));
+  else if (gameState === "card" || gameState === "blackjack") PlayerState.jackpot += Math.max(1, Math.floor(amount * 0.05));
+  else if (gameState === "roulette") PlayerState.jackpot += Math.max(1, Math.floor(amount * 0.06));
+  else if (gameState === "bingo") PlayerState.jackpot += Math.max(1, Math.floor(amount * 0.03));
 }
 function feedJackpotByWin(returnedAmount, big) {
-  const profit = returnedAmount - lastStake;
+  const profit = returnedAmount - PlayerState.lastStake;
   if (profit <= 0) return;
   const rate = big ? 0.05 : 0.03;
-  jackpot += Math.max(1, Math.floor(profit * rate));
+  PlayerState.jackpot += Math.max(1, Math.floor(profit * rate));
 }
-function reduceJackpot(amount) { jackpot -= amount;
-  if (jackpot < 450) resetJackpot(); }
-function canBgmPlay() { return BGM_STATES.includes(state);
+function reduceJackpot(amount) { PlayerState.jackpot -= amount;
+  if (PlayerState.jackpot < 450) resetJackpot(); }
+function canBgmPlay() { return BGM_STATES.has(UIState.state);
 }
 function startBgm() {
-  if (bgmPlayback === null && bgmTimer === null && state !== "bust" && canBgmPlay()) {
+  if (bgmPlayback === null && bgmTimer === null && UIState.state !== "bust" && canBgmPlay()) {
     bgmPlayback = playTune(bgm, Infinity);
   }
 }
@@ -1934,7 +1998,7 @@ function stopBgm() {
   }
 }
 function duckBgm(delay) {
-  if (state === "bust") return;
+  if (UIState.state === "bust") return;
   if (bgmTimer !== null) {
     clearTimeout(bgmTimer);
   }
@@ -1947,31 +2011,44 @@ function duckBgm(delay) {
     startBgm();
   }, delay);
 }
-function playSound(t, delay = 0) { if (delay > 0) duckBgm(delay); playTune(t); }
+function playSound(t, delay = 0) { if (delay > 0) { duckBgm(delay); } playTune(t); }
 function goBust(forced = false) { 
   stopBgm(); 
-  if (forced || bank <= -5000 || debt > 0) {
-    state = "bust"; playTune(bustSfx);
+  if (ShopState.upgrades.insurance && !forced && PlayerState.bank <= 0) {
+    ShopState.upgrades.insurance = false;
+    PlayerState.bank = 50000;
+    UIState.state = "insurance_notif";
+    playSound(winSfx);
+  } else if (forced || PlayerState.bank <= -5000 || PlayerState.debt > 0) {
+    UIState.state = "bust"; playTune(bustSfx);
   } else {
-    state = "loan_shark"; playTune(loseSfx);
+    UIState.state = "loan_shark"; playTune(loseSfx);
     const r = Math.random();
-    if (r < 1.0) offeredDeal = 3;
-    else if (r < 0.60) offeredDeal = 1;
-    else offeredDeal = 2;
+    if (r < 0.4) PlayerState.offeredDeal = 3;
+    else if (r < 0.7) PlayerState.offeredDeal = 1;
+    else PlayerState.offeredDeal = 2;
   }
   render(); 
 }
 function updateStakes() {
   const oldStake = stakes[stakeIndex];
-  const tierStakes = STAKE_TIERS.find(([limit]) => bank < limit || limit === Infinity)[1];
+  const tierStakes = STAKE_TIERS.find(([limit]) => PlayerState.bank < limit || limit === Infinity)[1];
   let rawStakes = tierStakes;
-  if (vipMode) rawStakes = rawStakes.map(s => s === "ALL" ? s : s * 10);
-  stakes = rawStakes.filter(s => s === "ALL" || s <= (bank < 0 ? Infinity : bank));
+  let creditLimit = 0;
+  if (PlayerState.vipMode) {
+    const activeTier = Math.max(1, PlayerState.vipTier);
+    const multipliers = [1, 5, 10, 25, 50, 100];
+    const limits = [0, 50000, 250000, 1000000, 5000000, 25000000];
+    const mult = multipliers[activeTier];
+    creditLimit = limits[activeTier];
+    rawStakes = rawStakes.map(s => s === "ALL" ? s : s * mult);
+  }
+  stakes = rawStakes.filter(s => s === "ALL" || s <= (PlayerState.bank < 0 ? Infinity : PlayerState.bank + creditLimit));
   if (oldStake === "ALL") {
     stakeIndex = stakes.length - 1;
     return;
   }
-  const target = Math.min(oldStake, bank);
+  const target = Math.min(oldStake, PlayerState.bank);
   const exact = stakes.indexOf(target);
   if (exact >= 0) {
     stakeIndex = exact;
@@ -1980,22 +2057,31 @@ function updateStakes() {
   stakeIndex = stakes.reduce((best, s, i) =>
     s !== "ALL" && s <= target ? i : best, 0);
 }
-function fmt(n) { return n >= 10000 ? Math.floor(n / 1000) + "K" : "" + n;
+function hm(ms) { return hyperMode ? Math.max(1, Math.floor(ms / 5)) : ms; }
+function fmt(n) { 
+  if (n >= 1000000) return (Math.floor(n / 10000) / 100) + "M";
+  return n >= 10000 ? Math.floor(n / 1000) + "K" : "" + n;
 }
 function moneyText(label, returnedAmount) {
-  const profit = returnedAmount - lastStake;
-  if (profit > 0) return label + " " + fmt(profit);
-  if (profit < 0) return label + " " + fmt(-profit);
-  return label + " 0";
+  const profit = returnedAmount - PlayerState.lastStake;
+  if (profit > 0) return label + " +" + fmt(profit);
+  if (profit < 0) return label + " -" + fmt(-profit);
+  return label + " +" + fmt(0);
 }
 function lossText(label) {
-  if (label === "LOSS") return "LOST " + fmt(lastStake);
+  if (label === "LOSS") return "LOST -" + fmt(PlayerState.lastStake);
   if (label === "RISK") return "RISK LOST";
   if (label === "NO TIE") return "NO TIE";
   if (label === "TIE") return "TIE LOSS";
   return label;
 }
 function multLabel(mult) { return "" + mult; }
+function sharkMult() { return PlayerState.sharkDealType === 2 && PlayerState.sharkDeadline > 0 ? 5 : 1; }
+function getVipCreditLimit() {
+  if (!PlayerState.vipMode) return 0;
+  const limits = [0, 10000, 50000, 250000, 1000000, 5000000];
+  return limits[Math.max(1, PlayerState.vipTier)];
+}
 const TEXT_W = 20;
 function centerText(text) { return Math.max(0, Math.floor((TEXT_W - text.length) / 2)); }
 function rightText(text) { return Math.max(0, TEXT_W - text.length);
@@ -2003,66 +2089,66 @@ function rightText(text) { return Math.max(0, TEXT_W - text.length);
 function textUnderSprite(spriteX, text) { return Math.max(0, Math.round(spriteX * 2 + 1 - text.length / 2));
 }
 function clampHeat() {
-  if (vipMode) {
-    const minHeat = Math.min(10, Math.floor(bank / 100000));
-    if (heat < minHeat) heat = minHeat;
+  if (PlayerState.vipMode) {
+    const activeTier = Math.max(1, PlayerState.vipTier);
+    if (PlayerState.heat < activeTier) PlayerState.heat = activeTier;
   }
-  if (heat < 0) heat = 0;
-  if (heat > 10) heat = 10;
+  if (PlayerState.heat < 0) PlayerState.heat = 0;
+  if (PlayerState.heat > 10) PlayerState.heat = 10;
 }
 function stakeLabel() { const s = stakes[stakeIndex]; return s === "ALL" ?
-  "ALL" : "" + s; }
+  "ALL" : fmt(s); }
 function stakeValue() { const s = stakes[stakeIndex]; return s === "ALL" ?
-  bank : Math.min(s, bank); }
+  PlayerState.bank : Math.min(s, PlayerState.bank); }
 function cardSprite(n) { return cards[n - 1]; }
 function prepScreen(showHud = true) { clearText(); setMap(blankMap);
   if (showHud) drawHud(); }
 function clearGameTimers() {
   stopTitleFx();
-  if (slotTimer !== null) {
-    clearInterval(slotTimer);
-    slotTimer = null;
+  if (SlotState.timer !== null) {
+    clearInterval(SlotState.timer);
+    SlotState.timer = null;
   }
-  if (cardTimer !== null) {
-    clearInterval(cardTimer);
-    cardTimer = null;
+  if (CardState.timer !== null) {
+    clearInterval(CardState.timer);
+    CardState.timer = null;
   }
-  if (wheelTimer !== null) {
-    clearTimeout(wheelTimer);
-    wheelTimer = null;
+  if (WheelState.timer !== null) {
+    clearTimeout(WheelState.timer);
+    WheelState.timer = null;
   }
-  if (rouletteTimer !== null) {
-    clearInterval(rouletteTimer);
-    rouletteTimer = null;
+  if (TimerState.roulette !== null) {
+    clearInterval(TimerState.roulette);
+    TimerState.roulette = null;
   }
-  if (bingoTimer !== null) {
-    clearInterval(bingoTimer);
-    bingoTimer = null;
+  if (BingoState.timer !== null) {
+    clearInterval(BingoState.timer);
+    BingoState.timer = null;
   }
 }
-function clearTransition() { if (transitionTimer !== null) { clearTimeout(transitionTimer); transitionTimer = null;
+function clearTransition() { if (TimerState.transition !== null) { clearTimeout(TimerState.transition); TimerState.transition = null;
   } }
-function stopTitleFx() { if (titleTimer !== null) { clearInterval(titleTimer); titleTimer = null; } }
+function stopTitleFx() { if (TimerState.title !== null) { clearInterval(TimerState.title); TimerState.title = null; } }
 function startTitleFx() {
   stopTitleFx();
-  introFx = 0;
-  titleTimer = setInterval(() => {
-    if (state !== "title") {
+  UIState.introFx = 0;
+  TimerState.title = setInterval(() => {
+    if (UIState.state !== "title") {
       stopTitleFx();
       return;
     }
-    introFx = (introFx + 1) % 8;
+    UIState.introFx = (UIState.introFx + 1) % 8;
     render();
   }, 220);
 }
-function stopFx() { if (fxTimer !== null) { clearInterval(fxTimer); fxTimer = null; } fx = 0;
+function stopFx() { if (TimerState.fx !== null) { clearInterval(TimerState.fx); TimerState.fx = null; } UIState.fx = 0;
 }
 function startFx() {
   stopFx();
-  fx = 1;
-  fxTimer = setInterval(() => {
-    fx++;
-    if (fx > 12) {
+  UIState.fx = 1;
+  TimerState.fx = setInterval(() => {
+    UIState.fx++;
+    if (UIState.fx > 12) {
       stopFx();
     }
     render();
@@ -2117,18 +2203,18 @@ function drawSlotMachine(a, b, c, pulled) {
   });
 }
 function drawFx() {
-  if (fx <= 0) return;
-  sprs(fx % 2 === 0
+  if (UIState.fx <= 0) return;
+  sprs(UIState.fx % 2 === 0
     ? [[1, 2, spark], [7, 2, spark], [1, 5, spark], [7, 5, spark]]
     : [[2, 2, spark], [6, 2, spark], [2, 5, spark], [6, 5, spark]]);
 }
 function drawHud() {
   const betText = "BET " + stakeLabel();
-  txt("BANK " + fmt(bank), 1, 1, color`4`);
+  txt("BANK " + fmt(PlayerState.bank), 1, 1, color`4`);
   txtR(betText, 1, color`3`);
-  if (debt > 0) {
-    txt("DEBT " + fmt(debt), 0, 0, color`8`);
-    txtR(sharkDeadline + " LEFT", 0, color`7`);
+  if (PlayerState.debt > 0) {
+    txt("DEBT " + fmt(PlayerState.debt), 0, 0, color`8`);
+    txtR(PlayerState.sharkDeadline + " LEFT", 0, color`7`);
   }
 }
 function drawTitle() {
@@ -2141,7 +2227,7 @@ function drawTitle() {
     [6, 4, cardSprite(7)],
     [8, 4, wheelIcon]
   ]);
-  if (introFx % 2 === 0) {
+  if (UIState.introFx % 2 === 0) {
     sprs([[1, 2, spark], [8, 2, spark], [1, 6, spark], [8, 6, spark]]);
   } else {
     sprs([[2, 2, spark], [7, 2, spark], [2, 6, spark], [7, 6, spark]]);
@@ -2152,37 +2238,38 @@ function drawTitle() {
 function drawLobby() {
   prepScreen(true);
   
-  if (bank >= 100000 && debt === 0) txt("H VIP", 0, 0, vipMode ? color`6` : color`4`);
-  if (bank >= 1000000 && debt === 0) txtR("W BUY CASINO", 0, color`6`);
+  txt("S SHOP", 0, 0, color`6`);
+  if (ShopState.upgrades.hyperDrive) txt("W HYPER", 1, 0, hyperMode ? color`5` : color`4`);
+  if (PlayerState.vipTier > 0 && PlayerState.debt === 0) txtR("H VIP " + PlayerState.vipTier, 0, PlayerState.vipMode ? color`6` : color`4`);
   
-  if (!moreMenu) {
-    txtC(vipMode ? "VIP CASINO 1/2" : "CASINO 1/2", 3, color`6`);
+  if (UIState.moreMenu) {
+    txtC(PlayerState.vipMode ? "VIP CASINO 1/2" : "CASINO 1/2", 3, color`6`);
     sprs([[1, 4, cherry], [2, 4, lemon], [3, 4, seven], [5, 4, cardSprite(5)], [8, 4, wheelIcon]]);
     txt("J", 2, 7, color`2`); txt("I", 11, 7, color`2`); txt("L", 17, 7, color`2`);
     txt("SLOT", 1, 10, color`D`); txt("CARD", 9, 10, color`8`);
     txt("WHEEL", 14, 10, color`6`);
-    txtC("JACKPOT " + fmt(jackpot), 12, color`6`);
-    txt("K PAGE 2", 1, 14, color`H`); txtR("A/D BET", 14, color`H`);
+    txtC("JACKPOT " + fmt(PlayerState.jackpot), 12, color`6`);
+    txt("K PAGE 2", 1, 14, color`H`); txtR("A/D BET", 14, color`7`);
   } else {
-    txtC(vipMode ? "VIP CASINO 2/2" : "CASINO 2/2", 3, color`6`);
+    txtC(PlayerState.vipMode ? "VIP CASINO 2/2" : "CASINO 2/2", 3, color`6`);
     sprs([[1, 4, bjIcon], [4, 4, rouletteIcon], [7, 4, bingoIcon]]);
     txt("J", 2, 7, color`2`); txt("I", 8, 7, color`2`); txt("L", 14, 7, color`2`);
     txt("BJ", 2, 10, color`8`); txt("ROU", 7, 10, color`3`);
     txt("BINGO", 13, 10, color`6`);
-    txtC("JACKPOT " + fmt(jackpot), 12, color`6`);
-    txt("K PAGE 1", 1, 14, color`H`); txtR("A/D BET", 14, color`H`);
+    txtC("JACKPOT " + fmt(PlayerState.jackpot), 12, color`6`);
+    txt("K PAGE 1", 1, 14, color`H`); txtR("A/D BET", 14, color`7`);
   }
 }
 function drawLoanShark() {
   prepScreen(false);
   txtC("I WILL SPOT YOU...", 2, color`3`);
   
-  if (offeredDeal === 1) {
+  if (PlayerState.offeredDeal === 1) {
     txtC("100K CHIPS", 4, color`6`);
     txtC("VIP MODE ACTIVE!", 6, color`7`);
     txtC("PAY BACK 150K", 9, color`3`);
     txtC("IN 5 BETS OR ELSE", 10, color`3`);
-  } else if (offeredDeal === 2) {
+  } else if (PlayerState.offeredDeal === 2) {
     txtC("1000 CHIPS", 4, color`6`);
     txtC("5X ALL PAYOUTS!", 6, color`7`);
     txtC("PAY BACK 10K", 9, color`3`);
@@ -2209,10 +2296,10 @@ function drawRrCylinder(spinning, showBang) {
   const cyls = [r13, r_cyl1, r_cyl2, r_cyl3];
   let c = r13;
   if (spinning) {
-    c = cyls[rrAnimTicks % 4];
+    c = cyls[RRState.animTicks % 4];
   }
   addSprite(5, 2, c);
-  if (showBang && rrAnimResult) {
+  if (showBang && RRState.animResult) {
     addSprite(1, 2, rrBang);
     sprs([[1, 1, spark], [0, 2, spark], [1, 3, spark]]);
   }
@@ -2222,8 +2309,8 @@ function drawRussianRoulette() {
   txtC("RUSSIAN ROULETTE", 1, color`3`);
   drawRrGunFrame();
   drawRrCylinder(false, false);
-  txtC("CHAMBERS: " + (6 - rrPulls) + "/6", 11, color`6`);
-  txtC("WIN: " + fmt(rrWinnings), 13, color`7`);
+  txtC("CHAMBERS: " + (6 - RRState.pulls) + "/6", 11, color`6`);
+  txtC("WIN: " + fmt(RRState.winnings), 13, color`7`);
   txt("J PULL", 0, 15, color`7`);
   txtR("K WALK", 15, color`3`);
 }
@@ -2231,14 +2318,14 @@ function drawRrAnim() {
   prepScreen(false);
   txtC("RUSSIAN ROULETTE", 1, color`3`);
   drawRrGunFrame();
-  if (rrAnimTicks < 18) {
+  if (RRState.animTicks < 18) {
     txtC("SPINNING...", 11, color`4`);
     drawRrCylinder(true, false);
-  } else if (rrAnimTicks < 22) {
+  } else if (RRState.animTicks < 22) {
     txtC("PULLING...", 11, color`4`);
     drawRrCylinder(false, false);
   } else {
-    if (rrAnimResult) {
+    if (RRState.animResult) {
       txtC("!! BANG !!", 11, color`3`);
       drawRrCylinder(false, true);
     } else {
@@ -2257,35 +2344,35 @@ function drawWinCredits() {
 }
 function drawSlot() {
   prepScreen(true);
-  drawSlotMachine(reels[0], reels[1], reels[2], false);
-  if (heat >= 6) txtR("HOT", 5, color`3`);
-  txtC("JACKPOT " + fmt(jackpot), 10, color`6`);
+  drawSlotMachine(SlotState.reels[0], SlotState.reels[1], SlotState.reels[2], false);
+  if (PlayerState.heat >= 6) txtR("HOT", 5, color`3`);
+  txtC("JACKPOT " + fmt(PlayerState.jackpot), 10, color`6`);
   txt("J SPIN", 1, 13, color`7`);
   drawBack(13);
-  txtC("A/D BET", 14, color`H`);
-  txt("W AUTO " + (autoSpinSlot ? "ON" : "OFF"), 0, 15, autoSpinSlot ? color`6` : color`H`);
+  txtC("A/D BET", 14, color`7`);
+  if (ShopState.upgrades.autoSpin) txt("W AUTO " + (SlotState.autoSpin ? "ON" : "OFF"), 0, 15, SlotState.autoSpin ? color`6` : color`H`);
 }
 function drawSlotSpin() {
   prepScreen(true);
-  drawSlotMachine(reels[0], reels[1], reels[2], true);
-  if (heat >= 6) txtR("HOT", 5, color`3`);
-  txtC("JACKPOT " + fmt(jackpot), 10, color`6`);
-  txt("W AUTO " + (autoSpinSlot ? "ON" : "OFF"), 0, 15, autoSpinSlot ? color`6` : color`H`);
+  drawSlotMachine(SlotState.reels[0], SlotState.reels[1], SlotState.reels[2], true);
+  if (PlayerState.heat >= 6) txtR("HOT", 5, color`3`);
+  txtC("JACKPOT " + fmt(PlayerState.jackpot), 10, color`6`);
+  if (ShopState.upgrades.autoSpin) txt("W AUTO " + (SlotState.autoSpin ? "ON" : "OFF"), 0, 15, SlotState.autoSpin ? color`6` : color`H`);
 }
 function drawSlotChoice() {
   prepScreen(true);
-  drawSlotMachine(reels[0], justRisked ? chip : reels[1], reels[2], false);
-  if (pendingBig) {
+  drawSlotMachine(SlotState.reels[0], UIState.justRisked ? chip : SlotState.reels[1], SlotState.reels[2], false);
+  if (UIState.pendingBig) {
     drawFx();
   }
-  txtC(pendingText, 10, color`6`);
+  txtC(UIState.pendingText, 10, color`6`);
   txt("J RISK", 0, 14, color`3`);
   txt("L TAKE", 10, 14, color`6`);
-  txt("W AUTO " + (autoSpinSlot ? "ON" : "OFF"), 0, 15, autoSpinSlot ? color`6` : color`H`);
+  if (ShopState.upgrades.autoSpin) txt("W AUTO " + (SlotState.autoSpin ? "ON" : "OFF"), 0, 15, SlotState.autoSpin ? color`6` : color`H`);
 }
 function drawRiskRoll() {
   prepScreen(true);
-  drawSlotMachine(reels[0], chip, reels[2], true);
+  drawSlotMachine(SlotState.reels[0], chip, SlotState.reels[2], true);
   txtC("DOUBLE?", 10, color`6`);
 }
 function drawCardTable(leftCard, rightCard, revealRight) {
@@ -2296,20 +2383,20 @@ function drawCardTable(leftCard, rightCard, revealRight) {
 }
 function drawCard() {
   prepScreen(true);
-  drawCardTable(currentCard, nextCard, false);
+  drawCardTable(CardState.current, CardState.next, false);
   drawBack(3);
-  txtC("A/D BET", 12, color`H`);
+  txtC("A/D BET", 12, color`7`);
   txt("J LOW", 0, 14, color`7`);
   txtC("I TIE", 14, color`6`);
   txtR("L HIGH", 14, color`7`);
 }
 function drawCardRoll() {
   prepScreen(true);
-  drawCardTable(currentCard, nextCard, true);
+  drawCardTable(CardState.current, CardState.next, true);
   txtC("DRAW", 11, color`2`);
 }
 function drawWheelLights() {
-  const phase = state === "wheelSpin" ? wheelIndex % 2 : introFx % 2;
+  const phase = UIState.state === "wheelSpin" ? WheelState.index % 2 : UIState.introFx % 2;
   if (phase === 0) {
     sprs([[2, 2, spark], [7, 5, spark]]);
   } else {
@@ -2323,67 +2410,71 @@ function drawWheelBase(showCursor) {
     addSprite(p[0], p[1], wheel[i].type);
   }
   if (showCursor) {
-    const p = wheelPos[wheelIndex];
+    const p = wheelPos[WheelState.index];
     addSprite(p[0], p[1], cursorMark);
-    wheelCursor = getFirst(cursorMark);
+    WheelState.cursor = getFirst(cursorMark);
   }
 }
 function drawWheel() {
   prepScreen(true);
   drawWheelBase(true);
-  txtC((wheelMode === "hot" ? "HOT" : "SAFE") + " JP " + fmt(jackpot), 12, wheelMode === "hot" ? color`3` : color`6`);
+  txtC((wheelMode === "hot" ? "HOT" : "SAFE") + " JP " + fmt(PlayerState.jackpot), 12, wheelMode === "hot" ? color`3` : color`6`);
   txt("J SPIN", 0, 14, color`7`);
-  txtC(wheelMode === "hot" ? "I SAFE" : "I HOT", 14, color`H`);
+  if (ShopState.upgrades.hotWheel) txtC(wheelMode === "hot" ? "I SAFE" : "I HOT", 14, color`H`);
+  if (ShopState.upgrades.autoSpinWheel) txt("W AUTO " + (WheelState.autoSpin ? "ON" : "OFF"), 0, 15, WheelState.autoSpin ? color`6` : color`H`);
   drawBack(14);
 }
 function drawWheelSpin() {
   prepScreen(true);
   drawWheelBase(true);
   txtC(wheelBoosting ? "OVERCHARGE" : "SPINNING", 12, color`6`);
+  if (ShopState.upgrades.autoSpinWheel) txt("W AUTO " + (WheelState.autoSpin ? "ON" : "OFF"), 0, 15, WheelState.autoSpin ? color`6` : color`H`);
 }
 function drawLastBoard() {
-  if (lastGame === "slot") {
+  if (UIState.lastGame === "slot") {
     drawSlotMachine(
-      reels[0],
-      justRisked ? chip : reels[1],
-      reels[2],
+      SlotState.reels[0],
+      UIState.justRisked ? chip : SlotState.reels[1],
+      SlotState.reels[2],
       false
     );
-  } else if (lastGame === "card") {
-    addSprite(3, 3, cardSprite(currentCard));
-    addSprite(6, 3, cardSprite(nextCard));
-  } else if (lastGame === "wheel") {
+  } else if (UIState.lastGame === "card") {
+    addSprite(3, 3, cardSprite(CardState.current));
+    addSprite(6, 3, cardSprite(CardState.next));
+  } else if (UIState.lastGame === "wheel") {
     drawWheelBase(false);
-    const p = wheelPos[wheelIndex];
+    const p = wheelPos[WheelState.index];
     addSprite(p[0], p[1], cursorMark);
   }
 }
-function drawResult() {
+function drawResult() { // NOSONAR
   prepScreen(true);
   drawLastBoard();
-  if (resultGood && lastGame !== "wheel") {
+  if (UIState.resultGood && UIState.lastGame !== "wheel") {
     drawFx();
   }
-  if (lastGame === "wheel" && resultGood) {
+  if (UIState.lastGame === "wheel" && UIState.resultGood) {
     addSprite(4, 3, spark);
   }
-  if (resultGood && lastGame === "wheel" && wheel[wheelIndex].mult >= 5) {
+  if (UIState.resultGood && UIState.lastGame === "wheel" && wheel[WheelState.index].mult >= 5) {
     sprs([[2, 3, spark], [7, 3, spark]]);
   }
-  const y = lastGame === "wheel" ? 12 : 10;
-  txtC(resultText, y, resultGood ? color`6` : color`2`);
-  if (lastGame === "slot") txt("W AUTO " + (autoSpinSlot ? "ON" : "OFF"), 0, 15, autoSpinSlot ? color`6` : color`H`);
+  const y = UIState.lastGame === "wheel" ? 12 : 10;
+  txtC(UIState.resultText, y, UIState.resultGood ? color`6` : color`2`);
+  if (UIState.lastGame === "slot" && ShopState.upgrades.autoSpin) txt("W AUTO " + (SlotState.autoSpin ? "ON" : "OFF"), 0, 15, SlotState.autoSpin ? color`6` : color`H`);
+  if (UIState.lastGame === "wheel" && ShopState.upgrades.autoSpinWheel) txt("W AUTO " + (WheelState.autoSpin ? "ON" : "OFF"), 0, 15, WheelState.autoSpin ? color`6` : color`H`);
 }
 function drawLoss() {
   prepScreen(true);
   drawLastBoard();
-  if (lastGame === "none" || lastGame === "wheel") {
+  if (UIState.lastGame === "none" || UIState.lastGame === "wheel") {
     addSprite(4, 3, skull);
   }
-  const y = lastGame === "wheel" ? 12 : 10;
-  txtC(resultText, y, color`3`);
+  const y = UIState.lastGame === "wheel" ? 12 : 10;
+  txtC(UIState.resultText, y, color`3`);
   txtC("...", y + 2, color`3`);
-  if (lastGame === "slot") txt("W AUTO " + (autoSpinSlot ? "ON" : "OFF"), 0, 15, autoSpinSlot ? color`6` : color`H`);
+  if (UIState.lastGame === "slot" && ShopState.upgrades.autoSpin) txt("W AUTO " + (SlotState.autoSpin ? "ON" : "OFF"), 0, 15, SlotState.autoSpin ? color`6` : color`H`);
+  if (UIState.lastGame === "wheel" && ShopState.upgrades.autoSpinWheel) txt("W AUTO " + (WheelState.autoSpin ? "ON" : "OFF"), 0, 15, WheelState.autoSpin ? color`6` : color`H`);
 }
 
 function bjVal(card) { return typeof card === "number" ? card : card.v;
@@ -2416,36 +2507,34 @@ function drawBjCard(card, x, y, hidden) {
 function drawBjCards(hand, x, y, hiddenSecond) {
   for (let i = 0; i < hand.length && i < 5; i++) drawBjCard(hand[i], x + i * 2, y, hiddenSecond && i > 0);
 }
-function drawBlackjack() {
-  prepScreen(false);
-  const hasCards = bjPlayer.length > 0 || bjDealer.length > 0;
-  if (!hasCards) {
-    txt("BANK " + fmt(bank), 1, 0, color`4`); txtR("BET " + stakeLabel(), 0, color`3`);
-    txtC("BLACKJACK", 3, color`8`);
-    txtC("GET CLOSE TO 21", 6, color`2`);
-    txtC("J DEAL", 9, color`7`);
-    txtC("A/D BET", 12, color`H`);
-    drawBack(14);
-    return;
-  }
+function drawBlackjackEmpty() {
+  txt("BANK " + fmt(PlayerState.bank), 1, 0, color`4`); txtR("BET " + stakeLabel(), 0, color`3`);
+  txtC("BLACKJACK", 3, color`8`);
+  txtC("GET CLOSE TO 21", 6, color`2`);
+  txtC("J DEAL", 9, color`7`);
+  txtC("A/D BET", 12, color`7`);
+  drawBack(14);
+}
+
+function drawBlackjackHands() {
+  drawBjCards(bjDealer, 0, 0, bjDealerHidden);
+  const shown = bjShownDealer();
   if (bjActive2) {
-    drawBjCards(bjDealer, 0, 0, bjDealerHidden);
     drawBjCards(bjPlayer, 0, 3, false);
     drawBjCards(bjPlayer2, 0, 5, false);
-    const shown = bjShownDealer();
     txt("DLR " + bjTotal(shown) + (bjDealerHidden ? "+?" : ""), 0, 6, color`3`);
     txt((bjCurrentHand === 1 && bjActive ? ">" : "") + "H1 " + bjTotal(bjPlayer), 0, 13, color`9`);
     txt((bjCurrentHand === 2 && bjActive ? ">" : "") + "H2 " + bjTotal(bjPlayer2), 8, 13, color`9`);
   } else {
-    drawBjCards(bjDealer, 0, 0, bjDealerHidden);
     drawBjCards(bjPlayer, 0, 5, false);
-    const shown = bjShownDealer();
     txt("DLR " + bjTotal(shown) + (bjDealerHidden ? "+?" : ""), 0, 6, color`3`);
     txt("PLR " + bjTotal(bjPlayer), 0, 8, color`9`);
   }
-  
+}
+
+function drawBlackjackMenu() {
   if (bjMsg) {
-    txtR(bjMsg, 7, bjMsg.indexOf("LOST") >= 0 || bjMsg.indexOf("BUST") >= 0 ? color`3` : color`6`);
+    txtR(bjMsg, 7, bjMsg.includes("LOST") || bjMsg.includes("BUST") ? color`3` : color`6`);
     txtR("J NEW", 8, color`7`);
     txtR("K BACK", 9, color`9`);
   } else if (bjDealing) {
@@ -2453,7 +2542,7 @@ function drawBlackjack() {
   } else if (bjActive) {
     txtR("J HIT", 7, color`7`);
     txtR("L STAND", 8, color`9`);
-    if (bjPlayer.length === 2 && !bjActive2 && bank >= lastStake) {
+    if (bjPlayer.length === 2 && !bjActive2 && PlayerState.bank >= PlayerState.lastStake) {
       txtR("I DOUBLE", 9, color`H`);
       if (bjVal(bjPlayer[0]) === bjVal(bjPlayer[1])) {
         txt("W SPLIT", 0, 9, color`H`);
@@ -2464,7 +2553,16 @@ function drawBlackjack() {
     txtR("K BACK", 8, color`9`);
   }
 }
-function rouBetName() { const t = rouTypes[rouTypeIndex]; return t + (t === "NUM" ? " " + (rouPick === 37 ? "00" : rouPick) : "");
+
+function drawBlackjack() {
+  prepScreen(false);
+  const hasCards = bjPlayer.length > 0 || bjDealer.length > 0;
+  if (!hasCards) return drawBlackjackEmpty();
+  
+  drawBlackjackHands();
+  drawBlackjackMenu();
+}
+function rouBetName() { const t = rouTypes[rouTypeIndex]; return t + (t === "NUM" ? " " + (rouPick === 37 ? "00" : rouPick) : ""); // NOSONAR
 }
 function rouOption(name, x, y, idx) {
   txt((rouTypeIndex === idx ? ">" : " ") + name, x, y, rouTypeIndex === idx ? color`6` : color`7`);
@@ -2474,13 +2572,7 @@ function drawRouletteWheel(x, y, alt = false) {
   [rwTL2, rwTR2, rwBL2, rwBR2] : [rwTL1, rwTR1, rwBL1, rwBR1];
   sprs([[x, y, t[0]], [x + 1, y, t[1]], [x, y + 1, t[2]], [x + 1, y + 1, t[3]]]);
 }
-function drawRoulette() {
-  prepScreen(false);
-  txt("BANK " + fmt(bank), 1, 0, color`4`); txtR("BET " + stakeLabel(), 0, color`3`);
-  txtC("ROULETTE", 1, color`3`);
-  drawRouletteWheel(0, 2, false);
-  if (rouBets.length > 0) txt("BETS " + rouBets.length, 6, 3, color`9`);
-  
+function drawRouletteOptions() {
   rouOption("RED", 6, 5, 0);  rouOption("BLACK", 12, 5, 1);
   rouOption("ODD", 6, 7, 2);  rouOption("EVEN", 12, 7, 3);
   rouOption("LOW", 6, 9, 4);  rouOption("HIGH", 12, 9, 5);
@@ -2489,10 +2581,25 @@ function drawRoulette() {
   
   txt((rouTypeIndex === 9 ? ">" : " ") + "NUM", 12, 13, rouTypeIndex === 9 ? color`6` : color`7`);
   if (rouTypeIndex === 9) txt("W/S " + (rouPick === 37 ? "00" : rouPick), 12, 14, color`H`);
+}
+
+function drawRoulette() {
+  prepScreen(false);
+  txt("BANK " + fmt(PlayerState.bank), 1, 0, color`4`); txtR("BET " + stakeLabel(), 0, color`3`);
+  txtC("ROULETTE", 1, color`3`);
+  drawRouletteWheel(0, 2, false);
+  if (rouBets.length > 0) txt("BETS " + rouBets.length, 6, 3, color`9`);
+  
+  drawRouletteOptions();
   
   txt("L ADD", 0, 14, color`6`);
   txt("I SEL", 6, 14, color`H`);
-  txt("J SPIN", 0, 15, color`7`);
+  if (ShopState.upgrades?.autoRoul) {
+    txt(ShopState.upgrades.autoRoulOn ? "W AUTO ON " : "W AUTO OFF", 0, 15, ShopState.upgrades.autoRoulOn ? color`F` : color`9`);
+    txtC("J SPIN", 15, color`7`);
+  } else {
+    txt("J SPIN", 0, 15, color`7`);
+  }
   txtR("K BACK", 15, color`9`);
 }
 function drawRouletteSpin() {
@@ -2505,7 +2612,7 @@ function drawRouletteSpin() {
 }
 function drawRouletteResult() {
   prepScreen(false);
-  const good = rouMsg.indexOf("WIN") >= 0;
+  const good = rouMsg.includes("WIN");
   txtC("ROULETTE", 1, color`3`);
   drawRouletteWheel(4, 2, false);
   
@@ -2515,53 +2622,51 @@ function drawRouletteResult() {
     sprs([[2, 2, skull], [2, 3, skull], [7, 2, skull], [7, 3, skull]]);
   }
   
-  const resCol = rouColor === "RED" ? color`3` : rouColor === "BLACK" ? color`2` : color`4`;
+  const resCol = rouColor === "RED" ? color`3` : rouColor === "BLACK" ? color`2` : color`4`; // NOSONAR
   txtC(rouResultLabel(rouResult) + " " + rouColor, 9, resCol);
   txtC(rouMsg, 11, good ? color`6` : color`3`);
   txt("J AGAIN", 0, 14, color`7`);
   txtR("K BACK", 14, color`9`);
 }
-function bingoPad(n) { return n === 0 ? "FREE" : n < 10 ? "0" + n : "" + n; }
-function bingoBallLetter(n) { return n < 16 ? "B" : n < 31 ? "I" : n < 46 ? "N" : n < 61 ? "G" : "O"; }
-function bingoLetterColor(l) { return l === "B" ? color`3` : l === "I" ? color`9` : l === "N" ? color`4` : l === "G" ? color`7` : color`H`; }
-function drawBingoGrid() {
+function bingoPad(n) { return n === 0 ? "FREE" : n < 10 ? "0" + n : "" + n; } // NOSONAR
+function bingoBallLetter(n) { return n < 16 ? "B" : n < 31 ? "I" : n < 46 ? "N" : n < 61 ? "G" : "O"; } // NOSONAR
+function bingoLetterColor(l) { return l === "B" ? color`3` : l === "I" ? color`9` : l === "N" ? color`4` : l === "G" ? color`7` : color`H`; } // NOSONAR
+function drawBingoGrid() { // NOSONAR
   const letters = ["B", "I", "N", "G", "O"];
   for (let c = 0; c < 5; c++) txt(" " + letters[c], c * 4, 5, bingoLetterColor(letters[c]));
   for (let r = 0; r < 5; r++) {
     for (let c = 0; c < 5; c++) {
-      const x = c * 2, y = r + 3, n = bingoCard[r][c], marked = bingoMarks[r] && bingoMarks[r][c];
-      const selected = bingoStarted && !bingoDone && r === bingoR && c === bingoC;
-      const isActive = !bingoDrawing && bingoLast && (bingoLast === -99 || n === bingoLast) && !marked;
+      const x = c * 2, y = r + 3, n = BingoState.card[r][c], marked = BingoState.marks[r] && BingoState.marks[r][c]; // NOSONAR
+      const selected = BingoState.started && !BingoState.done && r === BingoState.r && c === BingoState.c;
+      const isActive = !BingoState.drawing && BingoState.last && (BingoState.last === -99 || n === BingoState.last) && !marked;
       addSprite(x, y, bingoBoxL);
       addSprite(x + 1, y, bingoBoxR);
       const label = bingoPad(n), tx = c * 4, ty = y * 2 + 1;
-      if (marked && n !== 0) sprs([[x, y, bingoDone ? bingoXL2 : bingoXL], [x + 1, y, bingoDone ? bingoXR2 : bingoXR]]);
-      const cellText = selected ? ">" + (n === 0 ? "FR" : label) : n === 0 ? "FREE" : " " + label;
-      const cellColor = selected ? color`6` : marked ? color`4` : isActive ? color`6` : color`0`;
+      if (marked && n !== 0) sprs([[x, y, BingoState.done ? bingoXL2 : bingoXL], [x + 1, y, BingoState.done ? bingoXR2 : bingoXR]]);
+      const cellText = selected ? ">" + (n === 0 ? "FR" : label) : n === 0 ? "FREE" : " " + label; // NOSONAR
+      const cellColor = selected ? color`6` : marked ? color`4` : isActive ? color`6` : color`0`; // NOSONAR
       txt(cellText, tx, ty, cellColor);
     }
   }
 }
-function drawBingo() {
-  prepScreen(false);
-  if (!bingoStarted) {
-    txt("BANK " + fmt(bank), 1, 0, color`4`);
-    txtR("BET " + stakeLabel(), 0, color`3`);
-    txtC("BINGO", 3, color`6`);
-    sprs([[4, 3, bingoIcon]]);
-    txtC("J PLAY " + stakeLabel(), 10, color`7`);
-    txtC("GET 5 IN A ROW", 12, color`H`);
-    txtC("A/D BET", 13, color`H`);
-    txtR("K BACK", 14, color`9`);
-    return;
-  }
+function drawBingoEmpty() {
+  txt("BANK " + fmt(PlayerState.bank), 1, 0, color`4`);
+  txtR("BET " + stakeLabel(), 0, color`3`);
+  txtC("BINGO", 3, color`6`);
+  sprs([[4, 3, bingoIcon]]);
+  txtC("J PLAY " + stakeLabel(), 10, color`7`);
+  txtC("GET 5 IN A ROW", 12, color`H`);
+  txtC("A/D BET", 13, color`7`);
+  txtR("K BACK", 14, color`9`);
+}
 
-  txt("BALLS LEFT " + (40 - bingoBalls.length), 0, 1, color`2`);
-  if (bingoDone) {
+function drawBingoMenu() {
+  txt("BALLS LEFT " + (40 - BingoState.balls.length), 0, 1, color`2`);
+  if (BingoState.done) {
     txtR("J NEW", 1, color`7`);
     txtR("K BACK", 3, color`9`);
-  } else if (bingoBalls.length >= 40) {
-    const cost = Math.max(3, Math.floor(lastStake * 0.2));
+  } else if (BingoState.balls.length >= 40) {
+    const cost = Math.max(3, Math.floor(PlayerState.lastStake * 0.2));
     txtR("L EXTRA -" + cost, 1, color`7`);
     txtR("J GIVE UP", 2, color`7`);
     txtR("K BACK", 3, color`9`);
@@ -2570,27 +2675,31 @@ function drawBingo() {
     txtR("J MARK", 2, color`6`);
     txtR("K BACK", 3, color`9`);
   }
-
-  if (bingoLast) {
-    if (bingoLast === -99) {
+  if (BingoState.last) {
+    if (BingoState.last === -99) {
       txt("LAST: WILD!", 0, 3, color`6`);
     } else {
-      const l = bingoBallLetter(bingoLast);
+      const l = bingoBallLetter(BingoState.last);
       txt("LAST:", 0, 3, color`2`);
-      txt(l + " " + bingoLast, 6, 3, bingoLetterColor(l));
+      txt(l + " " + BingoState.last, 6, 3, bingoLetterColor(l));
     }
   }
-
-  if (bingoMsg && bingoMsg !== "NOT CALLED") {
-    txtC(bingoMsg, 4, color`6`);
+  if (BingoState.msg && BingoState.msg !== "NOT CALLED") {
+    txtC(BingoState.msg, 4, color`6`);
   }
+}
+
+function drawBingo() {
+  prepScreen(false);
+  if (!BingoState.started) return drawBingoEmpty();
+  drawBingoMenu();
   drawBingoGrid();
 }
 function drawBingoConfirm() {
   prepScreen(false);
   txtC("FORFEIT BINGO?", 6, color`3`);
   txtC("YOU WILL LOSE", 8, color`3`);
-  txtC("YOUR BET OF " + lastStake, 10, color`3`);
+  txtC("YOUR BET OF " + PlayerState.lastStake, 10, color`3`);
   txt("J CONFIRM", 1, 14, color`7`);
   txtR("K CANCEL", 14, color`9`);
 }
@@ -2613,9 +2722,91 @@ const screens = {
   slotSpin: drawSlotSpin,
   slotChoice: drawSlotChoice, riskRoll: drawRiskRoll, card: drawCard, cardRoll: drawCardRoll,
   wheel: drawWheel, wheelSpin: drawWheelSpin, blackjack: drawBlackjack, roulette: drawRoulette,
-  rouletteSpin: drawRouletteSpin, rouletteResult: drawRouletteResult, bingo: drawBingo, bingoConfirm: drawBingoConfirm, result: drawResult, loss: drawLoss
+  rouletteSpin: drawRouletteSpin, rouletteResult: drawRouletteResult, bingo: drawBingo, bingoConfirm: drawBingoConfirm, result: drawResult, loss: drawLoss,
+  shop: drawShop, confirm_win: drawConfirmWin, casino_notif: drawCasinoNotif, insurance_notif: drawInsuranceNotif
 };
-function render() { screens[state](); }
+function drawCasinoNotif() {
+  prepScreen(false);
+  txtC("CONGRATS!", 2, color`6`);
+  txtC("YOU HAVE EARNED", 5, color`7`);
+  txtC("5,000,000 CHIPS!", 6, color`7`);
+  txtC("THE CASINO CAN", 9, color`3`);
+  txtC("NOW BE PURCHASED", 10, color`3`);
+  txtC("IN THE SHOP!", 11, color`3`);
+  txtC("J CONTINUE", 14, color`4`);
+}
+function drawInsuranceNotif() {
+  prepScreen(false);
+  txtC("BANKRUPTCY AVOIDED", 2, color`6`);
+  txtC("YOUR INSURANCE", 5, color`7`);
+  txtC("POLICY PAID OUT", 6, color`7`);
+  txtC("50,000 CHIPS!", 8, color`4`);
+  txtC("J CONTINUE", 14, color`4`);
+}
+function drawConfirmWin() {
+  prepScreen(false);
+  txtC("BUY THE CASINO?", 2, color`6`);
+  txtC("COST: 5,000,000", 5, color`4`);
+  txtC("THIS WILL END", 8, color`3`);
+  txtC("YOUR RUN!", 9, color`3`);
+  
+  txt("J YES", 2, 14, color`4`);
+  txtR("K NO", 14, color`2`);
+}
+function drawShop() { // NOSONAR
+  const allItems = getShopItems();
+  const totalPages = Math.ceil(allItems.length / 4);
+  if (ShopState.page >= totalPages) ShopState.page = totalPages - 1;
+  const items = allItems.slice(ShopState.page * 4, ShopState.page * 4 + 4);
+  
+  prepScreen(false);
+  txtC("THE SHOP", 0, color`6`);
+  if (totalPages > 1) {
+    txt("W/S SEL", 1, 2, color`H`);
+    const pgStr = "A/D PG ";
+    const numStr = `${ShopState.page + 1}/${totalPages}`;
+    const startX = 20 - (pgStr.length + numStr.length) - 1;
+    txt(pgStr, startX, 2, color`3`);
+    txt(numStr, startX + pgStr.length, 2, color`7`);
+  }
+  txtC("BANK " + fmt(PlayerState.bank), 4, color`4`);
+  
+  if (ShopState.msg) {
+    txtC(ShopState.msg, 13, color`3`);
+  }
+  txt("K BACK", 1, 15, color`9`);
+  txtR("J BUY", 15, color`4`);
+  
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+    const y = 6 + i * 2;
+    if (i === ShopState.cursor) txt(">", 1, y, color`6`);
+    txt(item.name, 3, y, color`7`);
+    
+    if (item.type === "debt") {
+      if (PlayerState.debt > 0) {
+        txtR(fmt(PlayerState.debt), y, color`4`);
+      } else {
+        txtR("CLEARED", y, color`5`);
+      }
+    } else {
+      if (item.getOwned()) { // NOSONAR
+        txtR("SOLD", y, color`5`);
+      } else {
+        txtR(fmt(item.cost), y, color`2`);
+      }
+    }
+  }
+}
+function render() {
+  if (UIState.state === "lobby" && PlayerState.bank >= 5000000 && !UIState.sawCasinoNotif) {
+    UIState.state = "casino_notif";
+    UIState.sawCasinoNotif = true;
+    playSound(winSfx);
+    stopBgm();
+  }
+  screens[UIState.state]();
+}
 function weightedPick(weights) {
   let total = 0;
   for (const w of weights) {
@@ -2637,99 +2828,65 @@ function shuffleList(list) {
   }
   return list;
 }
-function buildWheel(boosted = false, mode = wheelMode) {
-  const entries = [];
-  let skullCount = 2;
-  let multPool = mode === "hot" ? HOT_MULT_POOL : SAFE_MULT_POOL;
-  let skullWeight = 22;
-  let chipWeight = 10;
+function getWheelParams(boosted, mode) {
+  let skullCount, multPool, skullWeight, chipWeight = 10;
   let sparkChance = mode === "hot" ? 55 : 18;
+  if (ShopState.upgrades.sparkMagnet) sparkChance *= 3;
   let sparkWeight = mode === "hot" ? 4 : 3;
   let jackpotChance = mode === "hot" ? 30 : 6;
   let jackpotWeight = mode === "hot" ? 9 : 6;
+  
   if (boosted) {
     if (mode === "hot") {
       skullCount = weightedPick([[2, 85], [3, 15]]);
       multPool = HOT_BOOST_MULT_POOL;
-      skullWeight = 14;
-      chipWeight = 11;
-      sparkChance = 55;
-      sparkWeight = 4;
-      jackpotChance = 15;
+      skullWeight = 14; chipWeight = 11; sparkChance = 55; sparkWeight = 4; jackpotChance = 15;
     } else {
       skullCount = weightedPick([[1, 85], [2, 15]]);
       multPool = BOOST_MULT_POOL;
-      skullWeight = 8;
-      chipWeight = 11;
-      sparkChance = 35;
-      sparkWeight = 2;
-      jackpotChance = 0;
+      skullWeight = 8; chipWeight = 11; sparkChance = 35; sparkWeight = 2; jackpotChance = 0;
     }
   } else if (mode === "safe") {
     skullCount = weightedPick([[1, 45], [2, 55]]);
-    skullWeight = 24;
+    skullWeight = 24; multPool = SAFE_MULT_POOL;
   } else {
     skullCount = weightedPick([[2, 60], [3, 40]]);
-    skullWeight = 28;
-    chipWeight = 9;
+    skullWeight = 28; chipWeight = 9; multPool = HOT_MULT_POOL;
   }
-  for (let i = 0; i < skullCount; i++) {
-    entries.push({
-      kind: "skull",
-      type: skull,
-      mult: 0,
-      weight: skullWeight
-    });
-  }
-  entries.push({
-    kind: "chip",
-    type: chip,
-    mult: 0,
-    weight: chipWeight
-  });
-  if (Math.random() * 100 < sparkChance) {
-    entries.push({
-      kind: "spark",
-      type: spark,
-      mult: 0,
-      weight: sparkWeight
-    });
-  }
-  if (Math.random() * 100 < jackpotChance) {
-    entries.push({
-      kind: "jackpot",
-      type: seven,
-      mult: 0,
-      weight: jackpotWeight
-    });
-  }
+  return { skullCount, multPool, skullWeight, chipWeight, sparkChance, sparkWeight, jackpotChance, jackpotWeight };
+}
+
+function buildWheel(boosted = false, mode = wheelMode) {
+  const entries = [];
+  const p = getWheelParams(boosted, mode);
+  
+  for (let i = 0; i < p.skullCount; i++) entries.push({ kind: "skull", type: skull, mult: 0, weight: p.skullWeight });
+  entries.push({ kind: "chip", type: chip, mult: 0, weight: p.chipWeight });
+  if (Math.random() * 100 < p.sparkChance) entries.push({ kind: "spark", type: spark, mult: 0, weight: p.sparkWeight });
+  if (Math.random() * 100 < p.jackpotChance) entries.push({ kind: "jackpot", type: seven, mult: 0, weight: p.jackpotWeight });
+  
   while (entries.length < 8) {
-    const mult = weightedPick(multPool);
-    entries.push({
-      kind: "mult",
-      type: wheelTypeForMult(mult),
-      mult,
-      weight: wheelWeightForMult(mult)
-    });
+    const mult = weightedPick(p.multPool);
+    entries.push({ kind: "mult", type: wheelTypeForMult(mult), mult, weight: wheelWeightForMult(mult) });
   }
   return shuffleList(entries);
 }
 function randomizeWheel(boosted = false) {
   wheel = buildWheel(boosted, wheelMode);
-  wheelIndex = randInt(0, wheel.length - 1);
-  wheelCursor = null;
+  WheelState.index = randInt(0, wheel.length - 1);
+  WheelState.cursor = null;
   if (!boosted) {
     wheelBoards[wheelMode] = wheel;
-    wheelBoardIndexes[wheelMode] = wheelIndex;
+    wheelBoardIndexes[wheelMode] = WheelState.index;
   }
 }
 function loadWheelMode(mode) {
   wheelMode = mode;
   if (wheelBoards[mode]) {
     wheel = wheelBoards[mode];
-    wheelIndex = wheelBoardIndexes[mode] ||
+    WheelState.index = wheelBoardIndexes[mode] ||
     0;
-    wheelCursor = null;
+    WheelState.cursor = null;
   } else {
     randomizeWheel(false);
   }
@@ -2737,74 +2894,74 @@ function loadWheelMode(mode) {
 function drawStartCard() {
   let n = randInt(4, 6);
   let tries = 0;
-  while (n === lastStartCard && tries < 8) {
+  while (n === CardState.lastStart && tries < 8) {
     n = randInt(4, 6);
     tries++;
   }
-  lastStartCard = n;
+  CardState.lastStart = n;
   return n;
 }
 function drawFinalNextCard() {
   let n = randInt(1, 9);
   let tries = 0;
-  while (n === lastNextCard && tries < 6) {
+  while (n === CardState.lastNext && tries < 6) {
     n = randInt(1, 9);
     tries++;
   }
-  lastNextCard = n;
+  CardState.lastNext = n;
   return n;
 }
 function prepareCardRound() {
-  currentCard = drawStartCard();
-  nextCard = 5;
-  cardReady = true;
+  CardState.current = drawStartCard();
+  CardState.next = 5;
+  CardState.ready = true;
 }
 function pressure() {
-  const before = bank + lastStake;
+  const before = PlayerState.bank + PlayerState.lastStake;
   if (before <= 0) return 1;
-  return lastStake / before;
+  return PlayerState.lastStake / before;
 }
-function spendStake(decreaseDeadline = true) {
+// eslint-disable-next-line sonarjs/cognitive-complexity
+function spendStake(decreaseDeadline = true) { // NOSONAR
   let s;
-  if (lastStakeAllIn) {
-    s = bank;
+  if (PlayerState.lastStakeAllIn) {
+    s = Math.max(0, PlayerState.bank);
   } else {
     s = stakes[stakeIndex];
-    if (s === "ALL") s = bank;
+    if (s === "ALL") s = Math.max(0, PlayerState.bank);
   }
   if (s === undefined || s <= 0) return 0;
   
-  if (debt > 0 && decreaseDeadline) {
-    sharkDeadline--;
-    if (bank >= debt) {
-      bank -= debt;
-      debt = 0;
-      sharkDeadline = 0;
+  if (PlayerState.debt > 0 && decreaseDeadline) {
+    PlayerState.sharkDeadline--;
+    if (PlayerState.bank >= PlayerState.debt) {
+      PlayerState.bank -= PlayerState.debt;
+      PlayerState.debt = 0;
+      PlayerState.sharkDeadline = 0;
       playSound(bigWinSfx);
-    } else if (sharkDeadline < 0) {
+    } else if (PlayerState.sharkDeadline < 0) {
       goBust(true);
       return 0;
     }
   }
   
-  if (s > bank) {
-    s = bank;
+  const creditLimit = getVipCreditLimit();
+
+  if (s > PlayerState.bank + creditLimit) {
+    s = PlayerState.bank + creditLimit;
     if (s <= 0) return 0;
   }
   
-  if (bank > 0) {
-    bank -= s;
-    if (bank < 0) bank = 0;
-    feedJackpotByBet(state, s);
-  }
+  PlayerState.bank -= s;
+  feedJackpotByBet(UIState.state, s);
   
-  lastStake = s;
-  lastStakeAllIn = stakes[stakeIndex] === "ALL";
+  PlayerState.lastStake = s;
+  PlayerState.lastStakeAllIn = stakes[stakeIndex] === "ALL";
   return s;
 }
 function slotSymbol() {
   const p = pressure();
-  if (lastStakeAllIn || p >= 0.65 || heat >= 6) {
+  if (PlayerState.lastStakeAllIn || p >= 0.65 || PlayerState.heat >= 6) {
     return weightedPick([
       [cherry, 43],
       [lemon, 29],
@@ -2814,7 +2971,7 @@ function slotSymbol() {
       [wild, 1]
     ]);
   }
-  if (p >= 0.3 || heat >= 3) {
+  if (p >= 0.3 || PlayerState.heat >= 3) {
     return weightedPick([
       [cherry, 37],
       [lemon, 28],
@@ -2841,91 +2998,61 @@ function weightedNot(symbol) {
 function makePairResult(symbol) { const out = [symbol, symbol, symbol]; out[randInt(0, 2)] = weightedNot(symbol); return out;
 }
 function makeSlotResult() {
-  let a = slotSymbol();
-  let b = slotSymbol();
-  let c = slotSymbol();
-  let tries = 0;
-  while (tries < 20) {
-    const syms = [a, b, c].filter(s => s !== wild);
-    const isTrip = (syms.length <= 1) || (syms.length === 2 && syms[0] === syms[1]) || (syms.length === 3 && syms[0] === syms[1] && syms[1] === syms[2]);
-    if (isTrip) {
-      // regenerate
-    } else {
-      let isPr = false;
-      let prSym = null;
-      if (syms.length <= 2) {
-        isPr = true;
-        prSym = syms.includes(lemon) ? lemon : syms.includes(cherry) ? cherry : syms[0];
-      } else if (syms[0] === syms[1] || syms[1] === syms[2] || syms[0] === syms[2]) {
-        isPr = true;
-        prSym = syms[0] === syms[1] ? syms[0] : syms[1] === syms[2] ? syms[1] : syms[0];
-      }
-      if (isPr) {
-        if (prSym !== cherry && prSym !== lemon) break;
-      } else {
-        break;
-      }
-    }
-    a = slotSymbol();
-    b = slotSymbol();
-    c = slotSymbol();
-    tries++;
-  }
-  return [a, b, c];
+  return [slotSymbol(), slotSymbol(), slotSymbol()];
 }
 function openSlot() {
-  if (state !== "lobby") return;
+  if (UIState.state !== "lobby") return;
   stopFx();
   clearTransition();
-  state = "slot";
+  UIState.state = "slot";
   playSound(betSfx);
   render();
 }
 function startSlotSpin() {
-  if (state !== "slot") return;
+  if (UIState.state !== "slot") return;
   stopFx();
   clearTransition();
   const stake = spendStake();
   if (stake === 0) return;
-  justRisked = false;
-  lastGame = "slot";
-  state = "slotSpin";
-  tick = 0;
-  finalReels = makeSlotResult();
-  playSound(spinSfx, autoSpinSlot ? 0 : 500);
+  UIState.justRisked = false;
+  UIState.lastGame = "slot";
+  UIState.state = "slotSpin";
+  UIState.tick = 0;
+  SlotState.finalReels = makeSlotResult();
+  playSound(spinSfx, SlotState.autoSpin ? 0 : 500);
   render();
-  slotTimer = setInterval(() => {
-    tick++;
-    if (tick % 5 === 0) {
+  SlotState.timer = setInterval(() => {
+    UIState.tick++;
+    if (UIState.tick % 5 === 0) {
       playTick();
     }
-    reels[0] = tick < 18 ? slotSymbol() : finalReels[0];
-    reels[1] = tick < 34 ? slotSymbol() : finalReels[1];
-    reels[2] = tick < 50 ? slotSymbol() : finalReels[2];
-    setTileType(3, 3, reels[0]);
-    setTileType(4, 3, reels[1]);
-    setTileType(5, 3, reels[2]);
-    if (tick >= 50) {
+    SlotState.reels[0] = UIState.tick < 18 ? slotSymbol() : SlotState.finalReels[0];
+    SlotState.reels[1] = UIState.tick < 34 ? slotSymbol() : SlotState.finalReels[1];
+    SlotState.reels[2] = UIState.tick < 50 ? slotSymbol() : SlotState.finalReels[2];
+    setTileType(3, 3, SlotState.reels[0]);
+    setTileType(4, 3, SlotState.reels[1]);
+    setTileType(5, 3, SlotState.reels[2]);
+    if (UIState.tick >= 50) {
       finishSlot();
     }
   }, 65);
 }
 function finishSlot() {
-  clearInterval(slotTimer);
-  slotTimer = null;
-  reels = finalReels;
-  setTileType(3, 3, reels[0]);
-  setTileType(4, 3, reels[1]);
-  setTileType(5, 3, reels[2]);
-  transitionTimer = setTimeout(() => {
+  clearInterval(SlotState.timer);
+  SlotState.timer = null;
+  SlotState.reels = SlotState.finalReels;
+  setTileType(3, 3, SlotState.reels[0]);
+  setTileType(4, 3, SlotState.reels[1]);
+  setTileType(5, 3, SlotState.reels[2]);
+  TimerState.transition = setTimeout(() => {
     scoreSlot();
   }, 450);
 }
 function offerSlotWin(amount, text, big) {
-  pendingWin = amount;
-  pendingText = text;
-  pendingBig = big;
-  state = "slotChoice";
+  UIState.pendingWin = amount;
+  UIState.pendingText = text;
+  UIState.pendingBig = big;
+  UIState.state = "slotChoice";
   if (big) {
     startFx();
   } else {
@@ -2939,42 +3066,49 @@ function offerSlotWin(amount, text, big) {
   }
 }
 function takeSlotWin() {
-  if (state !== "slotChoice") return;
-  payWin(pendingWin, moneyText("WON", pendingWin), pendingBig);
+  if (UIState.state !== "slotChoice") return;
+  payWin(UIState.pendingWin, moneyText("WON", UIState.pendingWin), UIState.pendingBig);
 }
 function slotAutoSpinCheck() {
-  if (autoSpinSlot && bank >= stakes[stakeIndex]) {
-    setTimeout(() => { if (state === "slot") startSlotSpin(); }, 500);
+  const creditLimit = getVipCreditLimit();
+  if (SlotState.autoSpin && PlayerState.bank + creditLimit >= stakes[stakeIndex]) {
+    setTimeout(() => { if (UIState.state === "slot") startSlotSpin(); }, hm(500));
+  }
+}
+function wheelAutoSpinCheck() {
+  const creditLimit = getVipCreditLimit();
+  if (WheelState.autoSpin && PlayerState.bank + creditLimit >= stakes[stakeIndex]) {
+    setTimeout(() => { if (UIState.state === "wheel") spinWheel(); }, hm(500));
   }
 }
 function riskSlotWin() {
-  if (state !== "slotChoice") return;
+  if (UIState.state !== "slotChoice") return;
   stopFx();
   clearTransition();
-  justRisked = true;
-  state = "riskRoll";
+  UIState.justRisked = true;
+  UIState.state = "riskRoll";
   playSound(spinSfx, 500);
   render();
-  transitionTimer = setTimeout(() => {
-    const won = Math.random() < 0.45;
+  TimerState.transition = setTimeout(() => {
+    const won = Math.random() < (ShopState.upgrades.luckyCoin ? 0.6 : 0.45);
     if (won) {
-      const doubled = pendingWin * 2;
-      heat += 1;
+      const doubled = UIState.pendingWin * 2;
+      PlayerState.heat += 1;
       clampHeat();
-      pendingWin = doubled;
-      pendingText = moneyText("DOUBLE", doubled);
-      pendingBig = true;
-      state = "slotChoice";
+      UIState.pendingWin = doubled;
+      UIState.pendingText = moneyText("DOUBLE", doubled);
+      UIState.pendingBig = true;
+      UIState.state = "slotChoice";
       startFx();
       render();
       playSound(bigWinSfx, 1200);
     } else {
-      heat -= 1;
+      PlayerState.heat -= 1;
       clampHeat();
-      pendingWin = 0;
-      pendingText = "";
-      pendingBig = false;
-      if (bank <= 0) {
+      UIState.pendingWin = 0;
+      UIState.pendingText = "";
+      UIState.pendingBig = false;
+      if (PlayerState.bank <= 0) {
         goBust();
       } else {
         showLoss(lossText("RISK"), 1800);
@@ -2983,10 +3117,9 @@ function riskSlotWin() {
     }
   }, 900);
 }
-function scoreSlot() {
-  justRisked = false;
-  const [a, b, c] = reels;
-  const syms = reels.filter(s => s !== wild);
+function scoreSlot() { // NOSONAR
+  UIState.justRisked = false;
+  const syms = SlotState.reels.filter(s => s !== wild);
   let isTrip = false;
   let tripSym = null;
   if (syms.length <= 1) { isTrip = true; tripSym = syms.length === 1 ? syms[0] : seven; }
@@ -2996,13 +3129,13 @@ function scoreSlot() {
     const rule = SLOT_TRIPLES.find(([symbol]) => symbol === tripSym);
     if (rule) {
       const [symbol, label, mult, heatGain, big] = rule;
-      const prizePercent = Math.min(1.0, lastStake / 10.0);
-      const jackpotPrize = Math.floor(jackpot * prizePercent);
-      const payout = (symbol === seven ? lastStake + jackpotPrize : lastStake * mult) * (sharkDealType === 2 && sharkDeadline > 0 ? 5 : 1);
+      const prizePercent = Math.min(1, PlayerState.lastStake / 10); // NOSONAR
+      const jackpotPrize = Math.floor(PlayerState.jackpot * prizePercent);
+      const payout = (symbol === seven ? PlayerState.lastStake + jackpotPrize : PlayerState.lastStake * mult) * sharkMult();
       if (symbol === seven) {
         reduceJackpot(jackpotPrize);
       }
-      heat += heatGain;
+      PlayerState.heat += heatGain;
       clampHeat();
       offerSlotWin(payout, moneyText(label, payout), big);
       return;
@@ -3012,26 +3145,26 @@ function scoreSlot() {
   let prSym = null;
   if (syms.length <= 2) { 
     isPr = true;
-    prSym = syms.includes(lemon) ? lemon : syms.includes(cherry) ? cherry : syms[0];
+    prSym = syms.includes(lemon) ? lemon : syms.includes(cherry) ? cherry : syms[0]; // NOSONAR
   } else if (syms[0] === syms[1] || syms[1] === syms[2] || syms[0] === syms[2]) {
     isPr = true;
-    prSym = syms[0] === syms[1] ? syms[0] : syms[1] === syms[2] ? syms[1] : syms[0];
+    prSym = syms[0] === syms[1] ? syms[0] : syms[1] === syms[2] ? syms[1] : syms[0]; // NOSONAR
   }
   if (isPr) {
     if (prSym === cherry || prSym === lemon) {
-      const rate = prSym === cherry ? 0.50 : 0.85;
-      const refund = Math.floor(lastStake * rate) * (sharkDealType === 2 && sharkDeadline > 0 ? 5 : 1);
+      const rate = prSym === cherry ? 0.5 : 0.85;
+      const refund = Math.floor(PlayerState.lastStake * rate) * sharkMult();
       payWin(refund, moneyText("PAIR", refund), false);
       return;
     } else {
-      const refund = Math.floor(lastStake * 0.50) * (sharkDealType === 2 && sharkDeadline > 0 ? 5 : 1);
+      const refund = Math.floor(PlayerState.lastStake * 0.5) * sharkMult();
       payWin(refund, moneyText("CLOSE!", refund), false);
       return;
     }
   }
-  heat -= 1;
+  PlayerState.heat -= 1;
   clampHeat();
-  if (bank <= 0) {
+  if (PlayerState.bank <= 0) {
     goBust();
     return;
   }
@@ -3039,100 +3172,102 @@ function scoreSlot() {
   playSound(loseSfx, 1200);
 }
 function startCard() {
-  if (state !== "lobby") return;
+  if (UIState.state !== "lobby") return;
   stopFx();
   clearTransition();
-  if (!cardReady) {
+  if (!CardState.ready) {
     prepareCardRound();
   }
-  state = "card";
+  UIState.state = "card";
   playSound(betSfx);
   render();
 }
-function cardPayoutMultiplier(choice) {
+function cardPayoutMultiplier(choice) { // NOSONAR
   if (choice === "tie") {
-    let mult = 8.2 + heat * 0.05;
-    if (lastStakeAllIn) {
+    let mult = 8.2 + PlayerState.heat * 0.05;
+    if (PlayerState.lastStakeAllIn) {
       mult -= 0.15;
     }
     if (mult < 7.5) mult = 7.5;
     if (mult > 9) mult = 9;
+    if (ShopState.upgrades.cardShark) mult *= 1.25;
     return mult;
   }
   let winningNumbers = 0;
     if (choice === "high") {
-      winningNumbers = 9 - currentCard;
+      winningNumbers = 9 - CardState.current;
     } else {
-      winningNumbers = currentCard - 1;
+      winningNumbers = CardState.current - 1;
     }
     let mult = winningNumbers === 0 ? 0 : 9 / winningNumbers * 0.88 + 0.2;
   if (mult < 1.45) mult = 1.45;
   if (mult > 5.5) mult = 5.5;
-  mult += heat * 0.03;
-  if (lastStakeAllIn) {
+  mult += PlayerState.heat * 0.03;
+  if (PlayerState.lastStakeAllIn) {
     mult -= 0.08;
   }
   if (mult < 1.35) mult = 1.35;
+  if (ShopState.upgrades.cardShark) mult *= 1.25;
   return mult;
 }
 function guessCard(choice) {
-  if (state !== "card") return;
+  if (UIState.state !== "card") return;
   const stake = spendStake();
   if (stake === 0) return;
-  lastGame = "card";
-  cardReady = false;
+  UIState.lastGame = "card";
+  CardState.ready = false;
   const finalNextCard = drawFinalNextCard();
   let rollTicks = 0;
-  nextCard = randInt(1, 9);
-  state = "cardRoll";
+  CardState.next = randInt(1, 9);
+  UIState.state = "cardRoll";
   playSound(spinSfx, 500);
   render();
-  cardTimer = setInterval(() => {
+  CardState.timer = setInterval(() => {
     rollTicks++;
-    nextCard = randInt(1, 9);
-    setTileType(6, 3, cardSprite(nextCard));
+    CardState.next = randInt(1, 9);
+    setTileType(6, 3, cardSprite(CardState.next));
     if (rollTicks % 5 === 0) {
       playTick();
     }
     if (rollTicks >= 24) {
-      clearInterval(cardTimer);
-      cardTimer = null;
-      nextCard = finalNextCard;
-      setTileType(6, 3, cardSprite(nextCard));
-      transitionTimer = setTimeout(() => {
+      clearInterval(CardState.timer);
+      CardState.timer = null;
+      CardState.next = finalNextCard;
+      setTileType(6, 3, cardSprite(CardState.next));
+      TimerState.transition = setTimeout(() => {
         resolveCardGame(choice, stake);
       }, 1300);
     }
   }, 70);
 }
-function resolveCardGame(choice, stake) {
+function resolveCardGame(choice, stake) { // NOSONAR
   let won = false;
   if (choice === "tie") {
-    won = nextCard === currentCard;
+    won = CardState.next === CardState.current;
   } else if (choice === "high") {
-    won = nextCard > currentCard;
+    won = CardState.next > CardState.current;
   } else {
-    won = nextCard < currentCard;
+    won = CardState.next < CardState.current;
   }
   if (won) {
-    const payout = Math.floor(stake * cardPayoutMultiplier(choice)) * (sharkDealType === 2 && sharkDeadline > 0 ? 5 : 1);
+    const payout = Math.floor(stake * cardPayoutMultiplier(choice)) * sharkMult();
     const label = choice === "tie"
       ?
       moneyText("TIE", payout)
       : moneyText("WIN", payout);
-    heat += choice === "tie" ? 2 : 1;
+    PlayerState.heat += choice === "tie" ? 2 : 1;
     clampHeat();
     payWin(payout, label, choice === "tie");
     playSound(choice === "tie" ? bigWinSfx : winSfx, choice === "tie" ? 1200 : 900);
   } else {
-    heat -= 1;
+    PlayerState.heat -= 1;
     clampHeat();
-    if (bank <= 0) {
+    if (PlayerState.bank <= 0) {
       goBust();
     } else if (choice === "tie") {
       showLoss(lossText("NO TIE"), 1900);
       playSound(loseSfx, 1200);
-    } else if (nextCard === currentCard) {
+    } else if (CardState.next === CardState.current) {
       showLoss(lossText("TIE"), 2100);
       playSound(loseSfx, 1200);
     } else {
@@ -3142,10 +3277,10 @@ function resolveCardGame(choice, stake) {
   }
 }
 function startWheel() {
-  if (state !== "lobby") return;
+  if (UIState.state !== "lobby") return;
   stopFx();
   clearTransition();
-  state = "wheel";
+  UIState.state = "wheel";
   playSound(betSfx);
   render();
 }
@@ -3160,85 +3295,86 @@ function pickWheelBoost() { return weightedPick(BOOST_POOL); }
 function chipReturnAmount(baseAmount) { return baseAmount + Math.max(2, Math.floor(baseAmount * 0.2));
 }
 function toggleWheelMode() {
-  if (state !== "wheel") return;
-  wheelBoardIndexes[wheelMode] = wheelIndex;
+  if (UIState.state !== "wheel" || !ShopState.upgrades.hotWheel) return;
+  wheelBoardIndexes[wheelMode] = WheelState.index;
   loadWheelMode(wheelMode === "safe" ? "hot" : "safe");
   playSound(tickSfx);
   render();
 }
 function startWheelSpinFromCurrent() {
-  wheelFinal = pickWheelFinal();
-  const offset = (wheelFinal - wheelIndex + wheel.length) % wheel.length;
+  WheelState.final = pickWheelFinal();
+  const offset = (WheelState.final - WheelState.index + wheel.length) % wheel.length;
   const cycles = 5 + randInt(0, 1);
-  wheelSteps = cycles * wheel.length + offset;
-  wheelDelay = 18;
-  state = "wheelSpin";
+  WheelState.steps = cycles * wheel.length + offset;
+  WheelState.delay = 18;
+  UIState.state = "wheelSpin";
   playSound(spinSfx, 500);
   render();
   advanceWheelSpin();
 }
 function showWheelBoostText() {
   clearTransition();
-  resultText = "BOOST " + multLabel(wheelBoost) + "X";
-  resultGood = true;
-  state = "result";
+  UIState.resultText = "BOOST " + multLabel(wheelBoost) + "X";
+  UIState.resultGood = true;
+  UIState.state = "result";
   startFx();
   render();
-  transitionTimer = setTimeout(() => {
+  TimerState.transition = setTimeout(() => {
     stopFx();
     randomizeWheel(true);
     startWheelSpinFromCurrent();
   }, 3500);
 }
+// eslint-disable-next-line sonarjs/cognitive-complexity
 function spinWheel() {
-  if (state !== "wheel") return;
+  if (UIState.state !== "wheel") return;
   const stake = spendStake();
   if (stake === 0) return;
-  lastGame = "wheel";
+  UIState.lastGame = "wheel";
   wheelBoost = 1;
   wheelBoosting = false;
   startWheelSpinFromCurrent();
 }
 function advanceWheelSpin() {
-  wheelTimer = setTimeout(() => {
-    wheelIndex = (wheelIndex + 1) % wheel.length;
-    wheelSteps--;
-    if (wheelSteps % 2 === 0 && wheelDelay > 35) {
+  WheelState.timer = setTimeout(() => {
+    WheelState.index = (WheelState.index + 1) % wheel.length;
+    WheelState.steps--;
+    if (WheelState.steps % 2 === 0 && WheelState.delay > 35) {
       playTick();
     }
-    if (wheelSteps <= 2) {
-      wheelDelay += 145;
-    } else if (wheelSteps <= 5) {
-      wheelDelay += 85;
-    } else if (wheelSteps <= 10) {
-      wheelDelay += 45;
-    } else if (wheelSteps <= 18) {
-      wheelDelay += 15;
+    if (WheelState.steps <= 2) {
+      WheelState.delay += 145;
+    } else if (WheelState.steps <= 5) {
+      WheelState.delay += 85;
+    } else if (WheelState.steps <= 10) {
+      WheelState.delay += 45;
+    } else if (WheelState.steps <= 18) {
+      WheelState.delay += 15;
     } else {
-      wheelDelay += 1;
+      WheelState.delay += 1;
     }
-    if (wheelCursor) {
-      const p = wheelPos[wheelIndex];
-      wheelCursor.x = p[0];
-      wheelCursor.y = p[1];
+    if (WheelState.cursor) {
+      const p = wheelPos[WheelState.index];
+      WheelState.cursor.x = p[0];
+      WheelState.cursor.y = p[1];
     }
-    if (wheelSteps <= 0) {
+    if (WheelState.steps <= 0) {
       freezeWheelResult();
     } else {
       advanceWheelSpin();
     }
-  }, wheelDelay);
+  }, WheelState.delay);
 }
 function freezeWheelResult() {
-  clearTimeout(wheelTimer);
-  wheelTimer = null;
-  wheelIndex = wheelFinal;
-  if (wheelCursor) {
-    const p = wheelPos[wheelIndex];
-    wheelCursor.x = p[0];
-    wheelCursor.y = p[1];
+  clearTimeout(WheelState.timer);
+  WheelState.timer = null;
+  WheelState.index = WheelState.final;
+  if (WheelState.cursor) {
+    const p = wheelPos[WheelState.index];
+    WheelState.cursor.x = p[0];
+    WheelState.cursor.y = p[1];
   }
-  const landed = wheel[wheelIndex];
+  const landed = wheel[WheelState.index];
   if (landed.kind === "skull") {
     addSprite(4, 3, skull);
     playSound(loseSfx, 1200);
@@ -3253,13 +3389,13 @@ function freezeWheelResult() {
   } else {
     playSound(winSfx, 900);
   }
-  transitionTimer = setTimeout(() => {
+  TimerState.transition = setTimeout(() => {
     finishWheel();
-  }, landed.kind === "spark" && !wheelBoosting ? 1800 : 1800);
+  }, 1800);
 }
-function finishWheel() {
+function finishWheel() { // NOSONAR
   clearTransition();
-  const landed = wheel[wheelIndex];
+  const landed = wheel[WheelState.index];
   if (landed.kind === "spark" && !wheelBoosting) {
     wheelBoost = pickWheelBoost();
     wheelBoosting = true;
@@ -3267,8 +3403,8 @@ function finishWheel() {
     return;
   }
   if (landed.kind === "spark" && wheelBoosting) {
-    const returned = Math.floor(lastStake * wheelBoost);
-    heat += returned > lastStake ? 1 : 0;
+    const returned = Math.floor(PlayerState.lastStake * wheelBoost);
+    PlayerState.heat += returned > PlayerState.lastStake ? 1 : 0;
     clampHeat();
     wheelBoosting = false;
     payWin(
@@ -3279,10 +3415,10 @@ function finishWheel() {
     return;
   }
   if (landed.kind === "jackpot") {
-    const prize = Math.max(1, Math.floor(jackpot * (lastStake < 10 ? 0.25 : 0.5)));
-    const returned = lastStake + prize;
+    const prize = Math.max(1, Math.floor(PlayerState.jackpot * (PlayerState.lastStake < 10 ? 0.25 : 0.5)));
+    const returned = PlayerState.lastStake + prize;
     reduceJackpot(prize);
-    heat += 2;
+    PlayerState.heat += 2;
     clampHeat();
     wheelBoosting = false;
     payWin(
@@ -3294,10 +3430,10 @@ function finishWheel() {
     return;
   }
   if (landed.kind === "skull") {
-    heat -= 1;
+    PlayerState.heat -= 1;
     clampHeat();
     wheelBoosting = false;
-    if (bank <= 0) {
+    if (PlayerState.bank <= 0) {
       goBust();
     } else {
       showLoss(lossText("LOSS"), 1900);
@@ -3305,9 +3441,9 @@ function finishWheel() {
     return;
   }
   if (landed.kind === "chip") {
-    const baseAmount = Math.floor(lastStake * wheelBoost);
+    const baseAmount = Math.floor(PlayerState.lastStake * wheelBoost);
     const returned = chipReturnAmount(baseAmount);
-    heat += 1;
+    PlayerState.heat += 1;
     clampHeat();
     const big = wheelBoost >= 3;
     wheelBoosting = false;
@@ -3315,13 +3451,13 @@ function finishWheel() {
     return;
   }
   if (landed.mult === 1 && wheelBoost === 1) {
-    bank += lastStake;
+    PlayerState.bank += PlayerState.lastStake;
     wheelBoosting = false;
-    showResult(moneyText("1X", lastStake), false, 1100);
+    showResult(moneyText("1X", PlayerState.lastStake), false, 1100);
     return;
   }
-  const payout = Math.floor(lastStake * landed.mult * wheelBoost) * (sharkDealType === 2 && sharkDeadline > 0 ? 5 : 1);
-  heat += landed.mult >= 5 || wheelBoost >= 3 ? 2 : 1;
+  const payout = Math.floor(PlayerState.lastStake * landed.mult * wheelBoost) * sharkMult();
+  PlayerState.heat += landed.mult >= 5 || wheelBoost >= 3 ? 2 : 1;
   clampHeat();
   const label = landed.mult + "X";
   const big = landed.mult >= 5 || wheelBoost >= 3;
@@ -3333,7 +3469,7 @@ function finishWheel() {
   );
 }
 function payWin(amount, text, big, feedJackpot = true) {
-  bank += amount;
+  PlayerState.bank += amount;
   if (feedJackpot) {
     feedJackpotByWin(amount, big);
   }
@@ -3342,64 +3478,65 @@ function payWin(amount, text, big, feedJackpot = true) {
 function finishRoundToLobby(currentState) {
   stopFx();
   updateStakes();
-  if (state === currentState) {
-    if (bank <= 0) {
+  if (UIState.state === currentState) {
+    if (PlayerState.bank <= 0) {
       goBust();
       return;
     }
-    if (lastGame === "slot") {
-      state = "slot";
-    } else if (lastGame === "wheel") {
+    if (UIState.lastGame === "slot") {
+      UIState.state = "slot";
+    } else if (UIState.lastGame === "wheel") {
       wheelBoost = 1;
       wheelBoosting = false;
       randomizeWheel(false);
-      state = "wheel";
-    } else if (lastGame === "card") {
-      currentCard = nextCard;
-      nextCard = 5;
-      cardReady = true;
-      state = "card";
+      UIState.state = "wheel";
+    } else if (UIState.lastGame === "card") {
+      CardState.current = CardState.next;
+      CardState.next = 5;
+      CardState.ready = true;
+      UIState.state = "card";
     } else {
-      state = "lobby";
+      UIState.state = "lobby";
     }
     render();
     startBgm();
     
     // Auto-spin check after returning to slots
     slotAutoSpinCheck();
+    wheelAutoSpinCheck();
   }
 }
 function showResult(text, good, delay) {
   clearTransition();
-  state = "result";
-  resultText = text;
-  resultGood = good;
+  UIState.state = "result";
+  UIState.resultText = text;
+  UIState.resultGood = good;
   if (good) {
     startFx();
   } else {
     stopFx();
   }
   render();
-  transitionTimer = setTimeout(() => {
+  TimerState.transition = setTimeout(() => {
     finishRoundToLobby("result");
-  }, delay);
+  }, hm(delay));
 }
 function showLoss(text, delay) {
   clearTransition();
   stopFx();
-  state = "loss";
-  resultText = text;
-  resultGood = false;
+  UIState.state = "loss";
+  UIState.resultText = text;
+  UIState.resultGood = false;
   render();
-  transitionTimer = setTimeout(() => {
+  TimerState.transition = setTimeout(() => {
     finishRoundToLobby("loss");
-  }, delay);
+  }, hm(delay));
 }
 function canChangeBet() {
-  return BET_STATES.includes(state) ||
-    state === "card" ||
-    (state === "blackjack" && !bjActive) || state === "roulette" ||
-    (state === "bingo" && (!bingoStarted || bingoDone));
+  return BET_STATES.has(UIState.state) ||
+    UIState.state === "card" ||
+    (UIState.state === "blackjack" && !bjActive) || UIState.state === "roulette" ||
+    (UIState.state === "bingo" && (!BingoState.started || BingoState.done));
 }
 function changeStake(delta) {
   if (!canChangeBet()) return;
@@ -3413,9 +3550,9 @@ function prevStake() { changeStake(-1);
 }
 
 function openBlackjack() {
-  if (state !== "lobby") return;
+  if (UIState.state !== "lobby") return;
   resetBlackjack();
-  state = "blackjack";
+  UIState.state = "blackjack";
   playSound(betSfx);
   render();
 }
@@ -3437,7 +3574,7 @@ let bjDeck = [];
 function bjDraw() {
   if (bjDeck.length < 15) {
     bjDeck = [];
-    for(let v=1; v<=13; v++) for(let s of bjSuits) bjDeck.push({v,s});
+    for(let i=0; i<6; i++) for(let v=1; v<=13; v++) for(let s of bjSuits) bjDeck.push({v,s});
     shuffleList(bjDeck);
   }
   return bjDeck.pop();
@@ -3445,16 +3582,16 @@ function bjDraw() {
 function bjResolveHand(hand, stake) {
   const p = bjTotal(hand), d = bjTotal(bjDealer);
   if (p > 21) return { res: "BUST", won: -stake };
-  if (d > 21 || p > d) return { res: "WIN", won: stake, payout: (stake * 2) * (sharkDealType === 2 && sharkDeadline > 0 ? 5 : 1) };
-  if (p === d) return { res: "PUSH", won: 0, payout: stake * (sharkDealType === 2 && sharkDeadline > 0 ? 5 : 1) };
+  if (d > 21 || p > d) return { res: "WIN", won: stake, payout: (stake * 2) * sharkMult() };
+  if (p === d) return { res: "PUSH", won: 0, payout: stake * sharkMult() };
   return { res: "LOST", won: -stake };
 }
-function bjResolve() {
+function bjResolve() { // NOSONAR
   bjActive = false; bjDone = true; bjDealerHidden = false;
   let totalWon = 0;
   let totalPayout = 0;
   
-  const r1 = bjResolveHand(bjPlayer, lastStake);
+  const r1 = bjResolveHand(bjPlayer, PlayerState.lastStake);
   totalWon += r1.won;
   if (r1.payout) totalPayout += r1.payout;
   
@@ -3466,22 +3603,22 @@ function bjResolve() {
     if (r2.payout) totalPayout += r2.payout;
     msg += " H2 " + r2.res;
   } else {
-    msg = r1.res === "BUST" ? "BUST LOST " + fmt(lastStake) : 
-          r1.res === "WIN" ? moneyText("WIN", totalPayout) : 
-          r1.res === "PUSH" ? "PUSH 0" : "LOST " + fmt(lastStake);
+    msg = r1.res === "BUST" ? "BUST LOST " + fmt(PlayerState.lastStake) : 
+          r1.res === "WIN" ? moneyText("WIN", totalPayout) :  // NOSONAR
+          r1.res === "PUSH" ? "PUSH 0" : "LOST " + fmt(PlayerState.lastStake); // NOSONAR
   }
   
   if (totalPayout > 0) {
-    bank += totalPayout;
+    PlayerState.bank += totalPayout;
   }
   
   if (totalWon > 0) {
-    jackpot += Math.max(1, Math.floor(totalWon * 0.03));
-    heat += 1; clampHeat();
+    PlayerState.jackpot += Math.max(1, Math.floor(totalWon * 0.03));
+    PlayerState.heat += 1; clampHeat();
     playSound(winSfx, 900);
   } else if (totalWon < 0) {
-    heat -= 1; clampHeat();
-    if (bank <= 0) { goBust(); return; }
+    PlayerState.heat -= 1; clampHeat();
+    if (PlayerState.bank <= 0) { goBust(); return; }
     playSound(loseSfx, 1200);
   } else {
     playTune(tickSfx);
@@ -3507,12 +3644,12 @@ function bjStartDeal(stake) {
   ];
   let i = 0;
   const step = () => {
-    if (state !== "blackjack") return;
+    if (UIState.state !== "blackjack") return;
     deal[i++]();
     playTune(tickSfx);
     render();
     if (i < deal.length) {
-      transitionTimer = setTimeout(step, 320);
+      TimerState.transition = setTimeout(step, hm(320));
       return;
     }
     bjDealing = false;
@@ -3521,15 +3658,15 @@ function bjStartDeal(stake) {
     if (bjTotal(bjPlayer) === 21) {
       bjActive = false; bjDealerHidden = false;
       if (bjTotal(bjDealer) === 21) {
-        const payout = stake * (sharkDealType === 2 && sharkDeadline > 0 ? 5 : 1);
-        bank += payout;
+        const payout = stake * sharkMult();
+        PlayerState.bank += payout;
         bjDone = true; bjMsg = "PUSH 0";
         playTune(tickSfx);
       } else {
-        const payout = Math.floor(stake * 2.5) * (sharkDealType === 2 && sharkDeadline > 0 ? 5 : 1);
-        bank += payout;
-        jackpot += Math.max(1, Math.floor((payout - stake) * 0.05));
-        heat += 2; clampHeat();
+        const payout = Math.floor(stake * 2.5) * sharkMult();
+        PlayerState.bank += payout;
+        PlayerState.jackpot += Math.max(1, Math.floor((payout - stake) * 0.05));
+        PlayerState.heat += 2; clampHeat();
         bjDone = true; bjMsg = moneyText("BLACKJACK", payout);
         playSound(bigWinSfx, 1200);
       }
@@ -3538,15 +3675,15 @@ function bjStartDeal(stake) {
     render();
   };
   render();
-  transitionTimer = setTimeout(step, 220);
+  TimerState.transition = setTimeout(step, hm(220));
 }
 function bjSplit() {
-  if (state !== "blackjack" || !bjActive || bjDealing || bjActive2) return;
+  if (UIState.state !== "blackjack" || !bjActive || bjDealing || bjActive2) return;
   if (bjPlayer.length !== 2 || bjVal(bjPlayer[0]) !== bjVal(bjPlayer[1])) return;
-  if (bank < lastStake) return;
-  bank -= lastStake;
-  bjSplitStake = lastStake;
-  feedJackpotByBet(state, lastStake);
+  if (PlayerState.bank < PlayerState.lastStake) return;
+  PlayerState.bank -= PlayerState.lastStake;
+  bjSplitStake = PlayerState.lastStake;
+  feedJackpotByBet(UIState.state, PlayerState.lastStake);
   
   bjPlayer2 = [bjPlayer.pop()];
   bjActive2 = true;
@@ -3559,7 +3696,7 @@ function bjSplit() {
   render();
 }
 function bjAction() {
-  if (state !== "blackjack" || !bjActive || bjDealing) {
+  if (UIState.state !== "blackjack" || !bjActive || bjDealing) {
     if (bjDone && !bjDealing) { resetBlackjack(); render(); }
     else if (!bjActive && !bjDealing) {
       const stake = spendStake();
@@ -3577,20 +3714,26 @@ function bjAction() {
   render();
 }
 function bjDoubleDown() {
-  if (state !== "blackjack" || !bjActive || bjDealing || bjActive2) return;
-  if (bjPlayer.length !== 2) return;
-  if (bank < lastStake) return;
-  bank -= lastStake;
-  feedJackpotByBet(state, lastStake);
-  lastStake *= 2;
+  if (UIState.state !== "blackjack" || !bjActive || bjDealing) return;
+  const currentHand = bjCurrentHand === 1 ? bjPlayer : bjPlayer2;
+  const stakeAmount = bjCurrentHand === 1 ? PlayerState.lastStake : bjSplitStake;
+  if (currentHand.length !== 2) return;
+  if (PlayerState.bank < stakeAmount) return;
+  PlayerState.bank -= stakeAmount;
+  feedJackpotByBet(UIState.state, stakeAmount);
+  if (bjCurrentHand === 1) {
+    PlayerState.lastStake *= 2;
+  } else {
+    bjSplitStake *= 2;
+  }
   updateStakes();
-  bjPlayer.push(bjDraw());
+  currentHand.push(bjDraw());
   playTune(tickSfx);
   render();
   bjStand();
 }
 function bjStand() {
-  if (state !== "blackjack" || !bjActive || bjDealing) return;
+  if (UIState.state !== "blackjack" || !bjActive || bjDealing) return;
   if (bjActive2 && bjCurrentHand === 1) {
     bjCurrentHand = 2;
     playSound(tickSfx);
@@ -3602,29 +3745,29 @@ function bjStand() {
   playTune(tickSfx);
   render();
   const stepDealer = () => {
-    if (state !== "blackjack") return;
+    if (UIState.state !== "blackjack") return;
     if (bjTotal(bjDealer) < 17) {
       bjDealer.push(bjDraw());
       playTune(tickSfx);
       render();
-      transitionTimer = setTimeout(stepDealer, 500);
+      TimerState.transition = setTimeout(stepDealer, hm(500));
     } else {
       bjResolve();
     }
   };
-  transitionTimer = setTimeout(stepDealer, 500);
+  TimerState.transition = setTimeout(stepDealer, hm(500));
 }
 function openRoulette() {
-  if (state !== "lobby") return;
+  if (UIState.state !== "lobby") return;
   rouMsg = "";
   rouBets = [];
-  state = "roulette";
+  UIState.state = "roulette";
   updateStakes();
   playSound(betSfx);
   render();
 }
 function placeRouletteBet() {
-  if (state !== "roulette") return;
+  if (UIState.state !== "roulette") return;
   const stake = spendStake();
   if (stake === 0) return;
   const t = rouTypes[rouTypeIndex];
@@ -3633,14 +3776,14 @@ function placeRouletteBet() {
   render();
 }
 function cycleRouletteType() {
-  if (state !== "roulette") return;
+  if (UIState.state !== "roulette") return;
   rouTypeIndex = (rouTypeIndex + 1) % rouTypes.length;
   rouMsg = "";
   playSound(tickSfx);
   render();
 }
 function changeRouletteNumber(delta) {
-  if (state !== "roulette" || rouTypes[rouTypeIndex] !== "NUM") return;
+  if (UIState.state !== "roulette" || rouTypes[rouTypeIndex] !== "NUM") return;
   rouPick = (rouPick + delta + 38) % 38;
   playSound(tickSfx);
   render();
@@ -3665,46 +3808,49 @@ function rouWins(n, t, pick) {
   return false;
 }
 function spinRoulette() {
-  if (state !== "roulette") return;
+  if (UIState.state !== "roulette") return;
   if (rouBets.length === 0) {
     const stake = spendStake(true);
     if (stake === 0) return;
     rouBets.push({ type: rouTypes[rouTypeIndex], pick: rouPick, stake: stake });
   } else {
-    if (debt > 0) {
-      sharkDeadline--;
-      if (bank >= debt) {
-        bank -= debt;
-        debt = 0;
-        sharkDeadline = 0;
+    if (PlayerState.debt > 0) {
+      PlayerState.sharkDeadline--;
+      if (PlayerState.bank >= PlayerState.debt) {
+        PlayerState.bank -= PlayerState.debt;
+        PlayerState.debt = 0;
+        PlayerState.sharkDeadline = 0;
         playSound(bigWinSfx);
-      } else if (sharkDeadline < 0) {
+      } else if (PlayerState.sharkDeadline < 0) {
         goBust(true);
         return;
       }
     }
   }
+  if (rouBets.length > 0) {
+    lastRouBets = [...rouBets];
+  }
   rouMsg = "";
   rouSpinFrame = 0;
-  state = "rouletteSpin";
+  UIState.state = "rouletteSpin";
   playSound(spinSfx, 1200);
   render();
-  if (rouletteTimer !== null) clearInterval(rouletteTimer);
-  rouletteTimer = setInterval(() => {
+  if (TimerState.roulette !== null) clearInterval(TimerState.roulette);
+  TimerState.roulette = setInterval(() => {
     rouSpinFrame++;
     render();
     if (rouSpinFrame >= 10) {
-      clearInterval(rouletteTimer);
-      rouletteTimer = null;
+      clearInterval(TimerState.roulette);
+      TimerState.roulette = null;
       finishRoulette();
     }
   }, 100);
 }
-function finishRoulette() {
+function finishRoulette() { // NOSONAR
   clearTransition();
-  if (rouletteTimer !== null) {
-    clearInterval(rouletteTimer);
-    rouletteTimer = null;
+  if (TimerState.roulette !== null) {
+    clearInterval(TimerState.roulette);
+    TimerState.roulette = null;
   }
   rouResult = randInt(0, 37); rouColor = rouColorOf(rouResult);
   let totalWin = 0;
@@ -3717,92 +3863,133 @@ function finishRoulette() {
       let mult = 2;
       if (b.type === "NUM") mult = 36;
       else if (b.type.includes("-")) mult = 3;
-      totalWin += (b.stake * mult) * (sharkDealType === 2 && sharkDeadline > 0 ? 5 : 1);
+      totalWin += (b.stake * mult) * sharkMult();
       if (mult > maxMult) maxMult = mult;
     }
   }
   if (totalWin > 0) {
     payWin(totalWin, "WIN " + fmt(totalWin - totalBet), maxMult >= 36);
-    heat += maxMult >= 36 ? 2 : 1; clampHeat();
+    PlayerState.heat += maxMult >= 36 ? 2 : 1; clampHeat();
   } else {
-    heat -= 1; clampHeat();
+    PlayerState.heat -= 1; clampHeat();
     rouMsg = "LOST " + fmt(totalBet);
-    if (bank <= 0) { goBust(); return; }
+    if (PlayerState.bank <= 0) { goBust(); return; }
     playSound(loseSfx, 1200);
-    state = "rouletteResult";
+    UIState.state = "rouletteResult";
     updateStakes();
     render();
   }
   rouBets = [];
+  rouletteAutoSpinCheck();
+}
+function rouletteAutoSpinCheck() {
+  if (!ShopState.upgrades.autoRoulOn || lastRouBets.length === 0) return;
+  const totalBet = lastRouBets.reduce((s, b) => s + b.stake, 0);
+  if (PlayerState.bank >= totalBet) {
+    setTimeout(() => {
+      if (UIState.state === "roulette" || UIState.state === "rouletteResult") {
+         UIState.state = "roulette";
+         if (PlayerState.debt > 0) {
+           PlayerState.sharkDeadline--;
+           if (PlayerState.bank >= PlayerState.debt) {
+             PlayerState.bank -= PlayerState.debt;
+             PlayerState.debt = 0;
+             PlayerState.sharkDeadline = 0;
+             playSound(bigWinSfx);
+           } else if (PlayerState.sharkDeadline < 0) {
+             goBust(true);
+             return;
+           }
+         }
+         PlayerState.bank -= totalBet;
+         feedJackpotByBet("roulette", totalBet);
+         PlayerState.lastStake = totalBet;
+         rouBets = [...lastRouBets];
+         spinRoulette();
+      }
+    }, 1200);
+  } else {
+    ShopState.upgrades.autoRoulOn = false;
+  }
 }
 function openBingo() {
-  if (state !== "lobby") return;
+  if (UIState.state !== "lobby") return;
   resetBingo();
-  state = "bingo";
+  UIState.state = "bingo";
   playSound(betSfx);
   render();
 }
 function resetBingo() {
-  bingoCard = []; bingoMarks = []; bingoBalls = [];
-  bingoStarted = false; bingoDone = false; bingoMsg = "";
-  bingoLast = 0; bingoC = 0; bingoR = 0; bingoBad = 0; bingoDrawing = false;
-  if (bingoTimer !== null) { clearInterval(bingoTimer); bingoTimer = null; }
+  BingoState.card = []; BingoState.marks = []; BingoState.balls = [];
+  BingoState.started = false; BingoState.done = false; BingoState.msg = "";
+  BingoState.last = 0; BingoState.c = 0; BingoState.r = 0; BingoState.bad = 0; BingoState.drawing = false;
+  if (BingoState.timer !== null) { clearInterval(BingoState.timer); BingoState.timer = null; }
   updateStakes();
 }
 function makeBingoCard() {
-  bingoCard = [];
-  bingoMarks = [];
-  for (let r = 0; r < 5; r++) { bingoCard[r] = []; bingoMarks[r] = [];
+  BingoState.card = [];
+  BingoState.marks = [];
+  for (let r = 0; r < 5; r++) { BingoState.card[r] = []; BingoState.marks[r] = [];
   }
   for (let c = 0; c < 5; c++) {
     const used = [];
     for (let r = 0; r < 5; r++) {
-      let n;
-      do { n = randInt(c * 15 + 1, c * 15 + 15); } while (used.includes(n));
+      let n, attempts = 0;
+      do { n = randInt(c * 15 + 1, c * 15 + 15); attempts++; } while (used.includes(n) && attempts < 100);
       used.push(n);
-      bingoCard[r][c] = n;
-      bingoMarks[r][c] = false;
+      BingoState.card[r][c] = n;
+      BingoState.marks[r][c] = false;
     }
   }
-  bingoCard[2][2] = 0;
-  bingoMarks[2][2] = true;
+  BingoState.card[2][2] = 0;
+  BingoState.marks[2][2] = true;
+  if (ShopState.upgrades.bingoHacker) {
+    let extra = 4;
+    while (extra > 0) {
+      let r = randInt(0, 4), c = randInt(0, 4);
+      if (!BingoState.marks[r][c]) {
+        BingoState.marks[r][c] = true;
+        extra--;
+      }
+    }
+  }
 }
-function bingoHasLine() {
-  for (let r = 0; r < 5; r++) if (bingoMarks[r].every(Boolean)) return true;
+function bingoHasLine() { // NOSONAR
+  for (let r = 0; r < 5; r++) if (BingoState.marks[r].every(Boolean)) return true;
   for (let c = 0; c < 5; c++) {
     let ok = true;
-    for (let r = 0; r < 5; r++) if (!bingoMarks[r][c]) ok = false;
+    for (let r = 0; r < 5; r++) if (!BingoState.marks[r][c]) ok = false;
     if (ok) return true;
   }
   let a = true, b = true;
   for (let i = 0; i < 5; i++) {
-    if (!bingoMarks[i][i]) a = false;
-    if (!bingoMarks[i][4 - i]) b = false;
+    if (!BingoState.marks[i][i]) a = false;
+    if (!BingoState.marks[i][4 - i]) b = false;
   }
   return a || b;
 }
-function bingoNearMiss() {
+function bingoNearMiss() { // NOSONAR
   for (let r = 0; r < 5; r++) {
     let cnt = 0;
-    for (let c = 0; c < 5; c++) if (bingoMarks[r] && bingoMarks[r][c]) cnt++;
+    for (let c = 0; c < 5; c++) if (BingoState.marks[r] && BingoState.marks[r][c]) cnt++;
     if (cnt === 4) return true;
   }
   for (let c = 0; c < 5; c++) {
     let cnt = 0;
-    for (let r = 0; r < 5; r++) if (bingoMarks[r] && bingoMarks[r][c]) cnt++;
+    for (let r = 0; r < 5; r++) if (BingoState.marks[r] && BingoState.marks[r][c]) cnt++;
     if (cnt === 4) return true;
   }
   let d1 = 0, d2 = 0;
   for (let i = 0; i < 5; i++) {
-    if (bingoMarks[i] && bingoMarks[i][i]) d1++;
-    if (bingoMarks[i] && bingoMarks[i][4 - i]) d2++;
+    if (BingoState.marks[i] && BingoState.marks[i][i]) d1++;
+    if (BingoState.marks[i] && BingoState.marks[i][4 - i]) d2++;
   }
   return d1 === 4 || d2 === 4;
 }
 function bingoMove(dx, dy) {
-  if (state !== "bingo" || !bingoStarted || bingoDone || bingoDrawing) return;
-  bingoC = Math.max(0, Math.min(4, bingoC + dx));
-  bingoR = Math.max(0, Math.min(4, bingoR + dy));
+  if (UIState.state !== "bingo" || !BingoState.started || BingoState.done || BingoState.drawing) return;
+  BingoState.c = Math.max(0, Math.min(4, BingoState.c + dx));
+  BingoState.r = Math.max(0, Math.min(4, BingoState.r + dy));
   playTune(tickSfx);
   render();
 }
@@ -3810,91 +3997,92 @@ function startBingoRound() {
   const stake = spendStake();
   if (stake === 0) return false;
   makeBingoCard();
-  bingoStarted = true; bingoMsg = ""; bingoC = 0; bingoR = 0; bingoBad = 0;
+  BingoState.started = true; BingoState.msg = ""; BingoState.c = 0; BingoState.r = 0; BingoState.bad = 0;
   return true;
 }
-function bingoDrawBall(isExtra = false) {
-  if (state !== "bingo" || bingoDone || bingoDrawing) return;
-  if (!bingoStarted) { bingoMsg = "J PLAY"; render(); return; }
-  if (bingoLast === -99) { bingoMsg = "USE WILD FIRST!"; playTune(loseSfx); render(); return; }
-  if (bingoBalls.length >= 40 && !isExtra) { bingoDone = true; bingoMsg = "GAME OVER"; playTune(loseSfx); render(); return; }
+function bingoDrawBall(isExtra = false) { // NOSONAR
+  if (UIState.state !== "bingo" || BingoState.done || BingoState.drawing) return;
+  if (!BingoState.started) { BingoState.msg = "J PLAY"; render(); return; }
+  if (BingoState.last === -99) { BingoState.msg = "USE WILD FIRST!"; playTune(loseSfx); render(); return; }
+  if (BingoState.balls.length >= 40 && !isExtra) { BingoState.done = true; BingoState.msg = "GAME OVER"; playTune(loseSfx); render(); return; }
   let n, cardNums = [];
+  const ballSet = new Set(BingoState.balls);
   for (let r = 0; r < 5; r++) {
     for (let c = 0; c < 5; c++) {
-      let val = bingoCard[r][c];
-      if (val !== 0 && !bingoMarks[r][c] && !bingoBalls.includes(val)) cardNums.push(val);
+      let val = BingoState.card[r][c];
+      if (val !== 0 && !BingoState.marks[r][c] && !ballSet.has(val)) cardNums.push(val);
     }
   }
-  let hit = false, wildcard = Math.random() < 0.08 && bingoBalls.length > 5;
+  let hit = false, wildcard = Math.random() < 0.08 && BingoState.balls.length > 5;
   if (wildcard) {
     n = -99;
     hit = true;
-  } else if (bingoBad >= 3 && cardNums.length > 0 && Math.random() < 0.8) {
+  } else if (BingoState.bad >= 3 && cardNums.length > 0 && Math.random() < 0.8) {
     n = cardNums[randInt(0, cardNums.length - 1)];
-    bingoBad = 0;
+    BingoState.bad = 0;
     hit = true;
   } else {
-    do { n = randInt(1, 75); } while (bingoBalls.includes(n));
+    do { n = randInt(1, 75); } while (BingoState.balls.includes(n));
     for (let r = 0; r < 5; r++) {
-      for (let c = 0; c < 5; c++) if (bingoCard[r][c] === n) hit = true;
+      for (let c = 0; c < 5; c++) if (BingoState.card[r][c] === n) hit = true;
     }
   }
-  bingoDrawing = true;
-  bingoMsg = "";
+  BingoState.drawing = true;
+  BingoState.msg = "";
   let ticks = 0;
-  bingoTimer = setInterval(() => {
+  BingoState.timer = setInterval(() => {
     ticks++;
-    bingoLast = randInt(1, 75);
+    BingoState.last = randInt(1, 75);
     playTune(tickSfx);
     if (ticks >= 4) {
-      clearInterval(bingoTimer);
-      bingoTimer = null;
-      bingoBalls.push(n);
-      bingoLast = n;
-      if (n !== -99) { if (hit) bingoBad = 0; else bingoBad++; }
-      bingoDrawing = false;
+      clearInterval(BingoState.timer);
+      BingoState.timer = null;
+      BingoState.balls.push(n);
+      BingoState.last = n;
+      if (n !== -99) { if (hit) BingoState.bad = 0; else BingoState.bad++; }
+      BingoState.drawing = false;
       playTune(n === -99 ? winSfx : tickSfx);
     }
     render();
   }, 100);
   render();
 }
-function bingoAction() {
-  if (state !== "bingo" || bingoDrawing) return;
-  if (bingoDone) { resetBingo(); render(); return; }
-  if (!bingoStarted) { if (startBingoRound()) render(); return; }
-  const n = bingoCard[bingoR][bingoC];
-  if (n === 0 || bingoMarks[bingoR][bingoC]) {
-    bingoMsg = n === 0 ? "FREE" : "MARKED";
+function bingoAction() { // NOSONAR
+  if (UIState.state !== "bingo" || BingoState.drawing) return;
+  if (BingoState.done) { resetBingo(); render(); return; }
+  if (!BingoState.started) { if (startBingoRound()) render(); return; } // NOSONAR
+  const n = BingoState.card[BingoState.r][BingoState.c];
+  if (n === 0 || BingoState.marks[BingoState.r][BingoState.c]) {
+    BingoState.msg = n === 0 ? "FREE" : "MARKED";
     playTune(tickSfx);
-  } else if (bingoBalls.includes(n) || (bingoLast === -99 && n !== 0)) {
-    bingoMarks[bingoR][bingoC] = true;
-    let perfect = n === bingoLast || bingoLast === -99;
-    let bonus = perfect ? Math.max(5, Math.floor(lastStake * 0.25)) : 0;
-    bank += bonus;
-    if (bingoLast === -99) bingoLast = 0;
+  } else if (BingoState.balls.includes(n) || (BingoState.last === -99 && n !== 0)) {
+    BingoState.marks[BingoState.r][BingoState.c] = true;
+    let perfect = n === BingoState.last || BingoState.last === -99;
+    let bonus = perfect ? Math.max(5, Math.floor(PlayerState.lastStake * 0.25)) : 0;
+    PlayerState.bank += bonus;
+    if (BingoState.last === -99) BingoState.last = 0;
     if (bingoHasLine()) {
-      const balls = bingoBalls.length;
+      const balls = BingoState.balls.length;
       const mult = Math.max(2, Math.min(25, Math.floor(120 / balls)));
-      let payout = (lastStake * mult) * (sharkDealType === 2 && sharkDeadline > 0 ? 5 : 1), jackWon = false;
+      let payout = (PlayerState.lastStake * mult) * sharkMult(), jackWon = false;
       if (balls <= 15) {
-        const jackPrize = lastStake < 10 ? Math.floor(jackpot * 0.25) : (lastStake < 25 ? Math.floor(jackpot * 0.5) : jackpot);
-        payout += jackPrize * (sharkDealType === 2 && sharkDeadline > 0 ? 5 : 1);
-        if (jackPrize === jackpot) resetJackpot(); else reduceJackpot(jackPrize);
+        const jackPrize = PlayerState.lastStake < 10 ? Math.floor(PlayerState.jackpot * 0.25) : (PlayerState.lastStake < 25 ? Math.floor(PlayerState.jackpot * 0.5) : PlayerState.jackpot); // NOSONAR
+        payout += jackPrize * sharkMult();
+        if (jackPrize === PlayerState.jackpot) resetJackpot(); else reduceJackpot(jackPrize);
         jackWon = true;
       }
-      bank += payout;
+      PlayerState.bank += payout;
       feedJackpotByWin(payout, true);
       updateStakes();
-      bingoDone = true;
-      bingoMsg = jackWon ? moneyText("JACKPOT", payout + bonus) : moneyText("BINGO", payout + bonus);
+      BingoState.done = true;
+      BingoState.msg = jackWon ? moneyText("JACKPOT", payout + bonus) : moneyText("BINGO", payout + bonus);
       playSound(bigWinSfx, 1200);
     } else {
-      bingoMsg = perfect ? "PERFECT +" + bonus : bingoPad(n) + " MARK";
+      BingoState.msg = perfect ? "PERFECT +" + bonus : bingoPad(n) + " MARK";
       playTune(perfect ? winSfx : tickSfx);
     }
   } else {
-    bingoMsg = "NOT CALLED";
+    BingoState.msg = "NOT CALLED";
     playTune(loseSfx);
   }
   render();
@@ -3903,46 +4091,61 @@ function newGame() {
   clearGameTimers();
   clearTransition();
   stopFx();
-  bank = 150;
+  PlayerState.bank = 150;
   resetJackpot();
-  debt = 0;
-  sharkDeadline = 0;
-  sharkDealType = 0;
-  offeredDeal = 0;
-  vipMode = false;
+  PlayerState.debt = 0;
+  PlayerState.sharkDeadline = 0;
+  PlayerState.sharkDealType = 0;
+  PlayerState.offeredDeal = 0;
+  PlayerState.vipMode = false;
+  ShopState.upgrades.autoSpin = false;
+  ShopState.upgrades.autoSpinWheel = false;
+  PlayerState.vipTier = 0;
+  ShopState.upgrades.hotWheel = false;
+  ShopState.upgrades.luckyCoin = false;
+  ShopState.upgrades.sparkMagnet = false;
+  ShopState.upgrades.cardShark = false;
+  ShopState.upgrades.autoRoul = false;
+  ShopState.upgrades.hyperDrive = false;
+  ShopState.upgrades.bingoHacker = false;
+  ShopState.upgrades.insurance = false;
+  hyperMode = false;
+  SlotState.autoSpin = false;
+  WheelState.autoSpin = false;
+  ShopState.upgrades.autoRoulOn = false;
   stakeIndex = 1;
   updateStakes();
-  state = "lobby";
-  reels = [cherry, lemon, seven];
-  finalReels = [cherry, lemon, seven];
-  currentCard = 5;
-  nextCard = 5;
-  cardReady = false;
-  lastStartCard = 0;
-  lastNextCard = 0;
+  UIState.state = "lobby";
+  SlotState.reels = [cherry, lemon, seven];
+  SlotState.finalReels = [cherry, lemon, seven];
+  CardState.current = 5;
+  CardState.next = 5;
+  CardState.ready = false;
+  CardState.lastStart = 0;
+  CardState.lastNext = 0;
   wheelMode = "safe";
   wheelBoost = 1;
   wheelBoosting = false;
   wheelBoards = { safe: null, hot: null };
   wheelBoardIndexes = { safe: 0, hot: 0 };
   randomizeWheel(false);
-  wheelSteps = 0;
-  wheelFinal = 0;
-  wheelDelay = 0;
-  wheelCursor = null;
-  tick = 0;
-  lastStake = 0;
-  lastStakeAllIn = false;
-  heat = 0;
-  fx = 0;
-  resultText = "";
-  resultGood = false;
-  lastGame = "none";
-  pendingWin = 0;
-  pendingText = "";
-  pendingBig = false;
-  justRisked = false;
-  moreMenu = false;
+  WheelState.steps = 0;
+  WheelState.final = 0;
+  WheelState.delay = 0;
+  WheelState.cursor = null;
+  UIState.tick = 0;
+  PlayerState.lastStake = 0;
+  PlayerState.lastStakeAllIn = false;
+  PlayerState.heat = 0;
+  UIState.fx = 0;
+  UIState.resultText = "";
+  UIState.resultGood = false;
+  UIState.lastGame = "none";
+  UIState.pendingWin = 0;
+  UIState.pendingText = "";
+  UIState.pendingBig = false;
+  UIState.justRisked = false;
+  UIState.moreMenu = false;
   resetBlackjack();
   rouTypeIndex = 0;
   rouPick = 7;
@@ -3956,12 +4159,12 @@ function newGame() {
   startBgm();
 }
 function goLobby() {
-  if (state === "wheel") {
+  if (UIState.state === "wheel") {
     wheelBoost = 1;
     wheelBoosting = false;
   }
-  lastGame = "none";
-  state = "lobby";
+  UIState.lastGame = "none";
+  UIState.state = "lobby";
   updateStakes();
   playSound(betSfx);
   render();
@@ -3969,20 +4172,20 @@ function goLobby() {
 }
 function enterLobbyFromTitle() {
   stopTitleFx();
-  moreMenu = false;
-  state = "lobby";
+  UIState.moreMenu = false;
+  UIState.state = "lobby";
   playSound(betSfx);
   render();
   startBgm();
 }
-function wakeBgm() { if (state !== "bust") startBgm();
+function wakeBgm() { if (UIState.state !== "bust") startBgm();
 }
 function titleOrBust() {
-  if (state === "title") {
+  if (UIState.state === "title") {
     enterLobbyFromTitle();
     return true;
   }
-  if (state === "bust") {
+  if (UIState.state === "bust") {
     newGame();
     return true;
   }
@@ -3992,92 +4195,171 @@ const InputStateHandlers = {
   lobby: {
     a: () => prevStake(),
     d: () => nextStake(),
-    j: () => moreMenu ? openBlackjack() : openSlot(),
-    i: () => moreMenu ? openRoulette() : startCard(),
-    k: () => { moreMenu = !moreMenu; playSound(tickSfx); render(); },
-    l: () => moreMenu ? openBingo() : startWheel(),
-    h: () => { if (bank >= 100000) { vipMode = !vipMode; clampHeat(); updateStakes(); playTune(tickSfx); render(); } },
-    w: () => { if (bank >= 1000000) { state = "win_credits"; playTune(winSfx); render(); } }
+    j: () => UIState.moreMenu ? openBlackjack() : openSlot(),
+    i: () => UIState.moreMenu ? openRoulette() : startCard(),
+    k: () => { UIState.moreMenu = !UIState.moreMenu; playSound(tickSfx); render(); },
+    l: () => UIState.moreMenu ? openBingo() : startWheel(),
+    h: () => { if (PlayerState.vipTier > 0) { PlayerState.vipMode = !PlayerState.vipMode; clampHeat(); updateStakes(); playTune(tickSfx); render(); } },
+    w: () => { if (ShopState.upgrades.hyperDrive) { hyperMode = !hyperMode; playSound(tickSfx); render(); } },
+    s: () => { UIState.state = "shop"; ShopState.msg = ""; ShopState.cursor = 0; playSound(tickSfx); render(); }
+  },
+  shop: {
+    w: () => { const items = getShopItems().slice(ShopState.page * 4, ShopState.page * 4 + 4); ShopState.cursor = (ShopState.cursor - 1 + items.length) % items.length; ShopState.msg = ""; playSound(tickSfx); render(); },
+    s: () => { const items = getShopItems().slice(ShopState.page * 4, ShopState.page * 4 + 4); ShopState.cursor = (ShopState.cursor + 1) % items.length; ShopState.msg = ""; playSound(tickSfx); render(); },
+    a: () => { const totalPages = Math.ceil(getShopItems().length / 4); ShopState.page = (ShopState.page - 1 + totalPages) % totalPages; ShopState.cursor = 0; ShopState.msg = ""; playSound(tickSfx); render(); },
+    d: () => { const totalPages = Math.ceil(getShopItems().length / 4); ShopState.page = (ShopState.page + 1) % totalPages; ShopState.cursor = 0; ShopState.msg = ""; playSound(tickSfx); render(); },
+    k: () => { UIState.state = "lobby"; ShopState.page = 0; playSound(tickSfx); render(); },
+    j: () => { // NOSONAR
+      const items = getShopItems().slice(ShopState.page * 4, ShopState.page * 4 + 4);
+      const item = items[ShopState.cursor];
+      if (item.type === "debt") {
+        if (PlayerState.bank >= PlayerState.debt && PlayerState.debt > 0) {
+          PlayerState.bank -= PlayerState.debt;
+          PlayerState.debt = 0;
+          PlayerState.sharkDeadline = 0;
+          ShopState.msg = "DEBT CLEARED!";
+          playSound(bigWinSfx);
+          invalidateShopCache();
+        } else if (PlayerState.debt === 0) {
+          ShopState.msg = "NO DEBT!";
+          playSound(bustSfx);
+        } else {
+          ShopState.msg = "NOT ENOUGH";
+          playSound(bustSfx);
+        }
+      } else if (item.type === "win") {
+        if (PlayerState.bank >= item.cost) {
+          UIState.state = "confirm_win";
+          playSound(tickSfx);
+        } else {
+          ShopState.msg = "NOT ENOUGH";
+          playSound(bustSfx);
+        }
+      } else {
+        if (item.getOwned()) {
+          ShopState.msg = "ALREADY OWNED!";
+          playSound(bustSfx);
+        } else if (PlayerState.bank >= item.cost) {
+          PlayerState.bank -= item.cost;
+          if (item.type === "auto") ShopState.upgrades.autoSpin = true;
+          if (item.type === "autoWheel") ShopState.upgrades.autoSpinWheel = true;
+          if (item.type === "vip") { PlayerState.vipTier++; invalidateShopCache(); }
+          if (item.type === "hot") ShopState.upgrades.hotWheel = true;
+          if (item.type === "luckyCoin") ShopState.upgrades.luckyCoin = true;
+          if (item.type === "sparkMagnet") ShopState.upgrades.sparkMagnet = true;
+          if (item.type === "cardShark") ShopState.upgrades.cardShark = true;
+          if (item.type === "autoRoul") ShopState.upgrades.autoRoul = true;
+          if (item.type === "insurance") ShopState.upgrades.insurance = true;
+          if (item.type === "hyperDrive") ShopState.upgrades.hyperDrive = true;
+          if (item.type === "bingoHacker") ShopState.upgrades.bingoHacker = true;
+          ShopState.msg = "PURCHASED!";
+          playSound(winSfx);
+        } else {
+          ShopState.msg = "NOT ENOUGH";
+          playSound(bustSfx);
+        }
+      }
+      render();
+    }
   },
   loan_shark: {
     j: () => { 
-      if (offeredDeal === 1) {
-        bank += 100000; debt = 150000; sharkDeadline = 5; sharkDealType = 1; vipMode = true; state = "lobby"; updateStakes(); playSound(betSfx); render(); startBgm();
-      } else if (offeredDeal === 2) {
-        bank += 1000; debt = 10000; sharkDeadline = 10; sharkDealType = 2; state = "lobby"; updateStakes(); playSound(betSfx); render(); startBgm();
+      if (PlayerState.offeredDeal === 1) {
+        PlayerState.bank += 100000; PlayerState.debt = 150000; PlayerState.sharkDeadline = 5; PlayerState.sharkDealType = 1; PlayerState.vipMode = true; UIState.state = "lobby"; updateStakes(); playSound(betSfx); render(); startBgm();
+      } else if (PlayerState.offeredDeal === 2) {
+        PlayerState.bank += 1000; PlayerState.debt = 10000; PlayerState.sharkDeadline = 10; PlayerState.sharkDealType = 2; UIState.state = "lobby"; updateStakes(); playSound(betSfx); render(); startBgm();
       } else {
-        rrBullet = randInt(1, 6); rrPulls = 0; rrWinnings = 0; state = "russian_roulette"; playTune(loseSfx); render();
+        RRState.bullet = randInt(1, 6); RRState.pulls = 0; RRState.winnings = 0; UIState.state = "russian_roulette"; playTune(loseSfx); render();
       }
     },
-    k: () => { state = "bust"; playTune(bustSfx); render(); }
+    k: () => { UIState.state = "bust"; playTune(bustSfx); render(); }
   },
   russian_roulette: {
     j: () => {
-      state = "rr_animating";
-      rrPulls++;
-      rrAnimTicks = 0;
-      rrSpinOffset = 0;
-      rrAnimResult = (rrPulls === rrBullet);
+      UIState.state = "rr_animating";
+      RRState.pulls++;
+      RRState.animTicks = 0;
+      RRState.spinOffset = 0;
+      RRState.animResult = (RRState.pulls === RRState.bullet);
       playSound(tickSfx);
       render();
-      rrAnimTimer = setInterval(() => {
-        rrAnimTicks++;
-        if (rrAnimTicks < 18) {
-          rrSpinOffset = (rrSpinOffset + 1) % 6;
-          if (rrAnimTicks % 2 === 0) playTune(tickSfx2);
+      RRState.animTimer = setInterval(() => {
+        RRState.animTicks++;
+        if (RRState.animTicks < 18) {
+          RRState.spinOffset = (RRState.spinOffset + 1) % 6;
+          if (RRState.animTicks % 2 === 0) playTune(tickSfx2);
           render();
-        } else if (rrAnimTicks < 22) {
+        } else if (RRState.animTicks < 22) {
           render();
-        } else if (rrAnimTicks === 22) {
-          if (rrAnimResult) {
+        } else if (RRState.animTicks === 22) {
+          if (RRState.animResult) {
             playSound(bustSfx);
           } else {
             playSound(winSfx);
-            rrWinnings += 25000;
+            RRState.winnings += 25000;
           }
           render();
-        } else if (rrAnimTicks >= 32) {
-          clearInterval(rrAnimTimer);
-          if (rrAnimResult) {
+        } else if (RRState.animTicks >= 32) {
+          clearInterval(RRState.animTimer);
+          if (RRState.animResult) {
             goBust(true);
           } else {
-            state = "russian_roulette";
+            UIState.state = "russian_roulette";
             render();
           }
         }
       }, 100);
     },
     k: () => {
-      bank += rrWinnings;
-      state = "lobby";
+      PlayerState.bank += RRState.winnings;
+      UIState.state = "lobby";
       updateStakes();
       playSound(bigWinSfx);
       render();
       startBgm();
     }
   },
+  confirm_win: {
+    j: () => {
+      PlayerState.bank -= 5000000;
+      UIState.state = "win_credits";
+      playTune(winSfx);
+      render();
+    },
+    k: () => {
+      UIState.state = "shop";
+      playSound(tickSfx);
+      render();
+    }
+  },
+  casino_notif: {
+    j: () => { UIState.state = "lobby"; playSound(tickSfx); render(); startBgm(); }
+  },
+  insurance_notif: {
+    j: () => { UIState.state = "lobby"; playSound(tickSfx); render(); startBgm(); }
+  },
   rr_animating: {},
   win_credits: {},
   slotChoice: {
     j: () => riskSlotWin(),
     l: () => takeSlotWin(),
-    w: () => { autoSpinSlot = !autoSpinSlot; playSound(tickSfx); render(); }
+    w: () => { if (ShopState.upgrades.autoSpin) { SlotState.autoSpin = !SlotState.autoSpin; playSound(tickSfx); render(); } }
   },
   slot: {
     a: () => prevStake(),
     d: () => nextStake(),
     j: () => startSlotSpin(),
     k: () => goLobby(),
-    w: () => { autoSpinSlot = !autoSpinSlot; playSound(tickSfx); render(); slotAutoSpinCheck(); }
+    w: () => { if (ShopState.upgrades.autoSpin) { SlotState.autoSpin = !SlotState.autoSpin; playSound(tickSfx); render(); slotAutoSpinCheck(); } }
   },
   slotSpin: {
-    w: () => { autoSpinSlot = !autoSpinSlot; playSound(tickSfx); render(); }
+    w: () => { if (ShopState.upgrades.autoSpin) { SlotState.autoSpin = !SlotState.autoSpin; playSound(tickSfx); render(); } }
   },
   result: {
-    w: () => { autoSpinSlot = !autoSpinSlot; playSound(tickSfx); render(); }
+    w: () => { if (ShopState.upgrades.autoSpin) { SlotState.autoSpin = !SlotState.autoSpin; playSound(tickSfx); render(); } }
   },
   loss: {
-    w: () => { autoSpinSlot = !autoSpinSlot; playSound(tickSfx); render(); }
+    w: () => { if (ShopState.upgrades.autoSpin) { SlotState.autoSpin = !SlotState.autoSpin; playSound(tickSfx); render(); } }
   },
   card: {
     a: () => prevStake(),
@@ -4088,11 +4370,15 @@ const InputStateHandlers = {
     l: () => guessCard("high"),
   },
   wheel: {
+    w: () => { if (ShopState.upgrades.autoSpinWheel) { WheelState.autoSpin = !WheelState.autoSpin; playSound(tickSfx); render(); wheelAutoSpinCheck(); } },
     a: () => prevStake(),
     d: () => nextStake(),
     j: () => spinWheel(),
     i: () => toggleWheelMode(),
     k: () => goLobby(),
+  },
+  wheelSpin: {
+    w: () => { if (ShopState.upgrades.autoSpinWheel) { WheelState.autoSpin = !WheelState.autoSpin; playSound(tickSfx); render(); } }
   },
   blackjack: {
     a: () => prevStake(),
@@ -4106,7 +4392,16 @@ const InputStateHandlers = {
   roulette: {
     a: () => prevStake(),
     d: () => nextStake(),
-    w: () => changeRouletteNumber(-1),
+    w: () => {
+      if (rouTypeIndex === 9) {
+        changeRouletteNumber(-1);
+      } else if (ShopState.upgrades.autoRoul) {
+        ShopState.upgrades.autoRoulOn = !ShopState.upgrades.autoRoulOn;
+        playSound(tickSfx);
+        render();
+        rouletteAutoSpinCheck();
+      }
+    },
     s: () => changeRouletteNumber(1),
     j: () => spinRoulette(),
     i: () => cycleRouletteType(),
@@ -4123,34 +4418,34 @@ const InputStateHandlers = {
   rouletteResult: {
     j: () => {
       rouMsg = "";
-      state = "roulette";
+      UIState.state = "roulette";
       updateStakes();
       render();
     },
     k: () => goLobby(),
   },
   bingo: {
-    a: () => { if (bingoStarted && !bingoDone) bingoMove(-1, 0); else prevStake(); },
-    d: () => { if (bingoStarted && !bingoDone) bingoMove(1, 0); else nextStake(); },
+    a: () => { if (BingoState.started && !BingoState.done) bingoMove(-1, 0); else prevStake(); },
+    d: () => { if (BingoState.started && !BingoState.done) bingoMove(1, 0); else nextStake(); },
     w: () => bingoMove(0, -1),
     s: () => bingoMove(0, 1),
     j: () => {
-      if (bingoBalls.length >= 40 && !bingoDone) {
-        bingoDone = true; bingoMsg = "GAME OVER"; playTune(loseSfx); render();
+      if (BingoState.balls.length >= 40 && !BingoState.done) {
+        BingoState.done = true; BingoState.msg = "GAME OVER"; playTune(loseSfx); render();
       } else {
         bingoAction();
       }
     },
-    i: () => { if (bingoDone) { resetBingo(); render(); } },
+    i: () => { if (BingoState.done) { resetBingo(); render(); } },
     k: () => {
-      if (bingoStarted && !bingoDone) { state = "bingoConfirm"; render(); }
+      if (BingoState.started && !BingoState.done) { UIState.state = "bingoConfirm"; render(); }
       else goLobby();
     },
     l: () => {
-      if (bingoBalls.length >= 40 && !bingoDone) {
-        const cost = Math.max(3, Math.floor(lastStake * 0.2));
-        if (bingoNearMiss() && bingoBalls.length < 45 && bank >= cost) {
-          bank -= cost; jackpot += Math.floor(cost * 0.5); updateStakes(); bingoDrawBall(true);
+      if (BingoState.balls.length >= 40 && !BingoState.done) {
+        const cost = Math.max(3, Math.floor(PlayerState.lastStake * 0.2));
+        if (bingoNearMiss() && BingoState.balls.length < 45 && PlayerState.bank >= cost) {
+          PlayerState.bank -= cost; PlayerState.jackpot += Math.floor(cost * 0.5); updateStakes(); bingoDrawBall(true);
         }
       } else {
         bingoDrawBall();
@@ -4159,16 +4454,16 @@ const InputStateHandlers = {
   },
   bingoConfirm: {
     j: () => { resetBingo(); goLobby(); },
-    k: () => { state = "bingo"; render(); },
+    k: () => { UIState.state = "bingo"; render(); },
   }
 };
 
 function handleInput(key) {
   if (titleOrBust()) return;
-  if (state === "bingoConfirm" && (key !== "j" && key !== "k")) return;
+  if (UIState.state === "bingoConfirm" && (key !== "j" && key !== "k")) return;
   wakeBgm();
 
-  const handler = InputStateHandlers[state]?.[key];
+  const handler = InputStateHandlers[UIState.state]?.[key];
   if (handler) {
     handler();
   }
