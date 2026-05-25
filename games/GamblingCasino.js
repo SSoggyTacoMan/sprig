@@ -7,7 +7,7 @@
 */
 const bg = "x";
 const chip = "h", skull = "z", spark = "g", wheelIcon = "r", cursorMark = "Y";
-const cherry = "c", lemon = "l", bell = "e", bar = "b", seven = "s";
+const cherry = "c", lemon = "l", bell = "e", bar = "b", seven = "s", wild = "w";
 const num1 = "1", num2 = "2", num3 = "3", num4 = "4", num5 = "5",
       num6 = "6", num7 = "7", num8 = "8", num9 = "9";
 const w1 = "R", w2 = "M", w3 = "N", w5 = "O", w15 = "Q",
@@ -23,6 +23,12 @@ const bingoBoxL = ":", bingoBoxR = "'", bingoBallL = "<", bingoBallR = ">",
 const rwTL1 = "a", rwTR1 = "d", rwBL1 = "f", rwBR1 = "i",
       rwTL2 = "n", rwTR2 = "p", rwBL2 = "t", rwBR2 = "w";
 const bjIcon = "P", rouletteIcon = "S", bingoIcon = "X";
+const r00 = "α", r01 = "β", r02 = "γ", r03 = "δ", r04 = "ε", r05 = "ζ";
+const r10 = "η", r11 = "θ", r12 = "ι", r13 = "κ", r14 = "λ", r15 = "μ";
+const r23 = "π", r24 = "ρ", r25 = "σ";
+const r34 = "ψ", r35 = "ω";
+const r_cyl1 = "Γ", r_cyl2 = "Δ", r_cyl3 = "Θ";
+const rrBang = "Σ";
 const bjSuits = [bjHeart, bjDiamond, bjSpade, bjClub];
 let stakes = [5, 10, 25, 50, 75, "ALL"], stakeIndex = 1;
 const cards = [num1, num2, num3, num4, num5, num6, num7, num8, num9];
@@ -429,6 +435,385 @@ C33330033033333C
 ................
 ................
 ................
+................
+`],
+[r00, bitmap`
+................
+................
+................
+................
+................
+................
+................
+................
+......00........
+.....0110.......
+.....0110.......
+.....0110.......
+.....0110.......
+....011110000000
+....011111111111
+....011111111111
+`],
+  [r01, bitmap`
+................
+................
+................
+................
+................
+................
+................
+................
+................
+................
+................
+................
+................
+0000000000000000
+1111111111111111
+1111111111111111
+`],
+  [r02, bitmap`
+................
+................
+................
+................
+................
+................
+................
+................
+................
+................
+................
+................
+................
+0000000000000000
+1111111111111111
+1111111111111111
+`],
+  [r03, bitmap`
+................
+................
+................
+................
+................
+................
+................
+................
+................
+................
+................
+................
+........00000...
+0000000011111000
+1111111111111111
+1111111111111111
+`],
+  [r04, bitmap`
+................
+................
+................
+................
+................
+................
+................
+................
+................
+................
+...............0
+...............0
+..............01
+0000000000000011
+1111111111111111
+1111111111111111
+`],
+  [r05, bitmap`
+................
+................
+................
+................
+................
+................
+................
+................
+................
+00..............
+110.............
+110...00........
+110..0110.......
+1110.0110.......
+11100110........
+11111110........
+`],
+  [r10, bitmap`
+....011111111111
+....000000000000
+................
+................
+................
+...........000..
+..........01110.
+..........01110.
+..........011100
+..........011111
+..........000000
+................
+................
+................
+................
+................
+`],
+  [r11, bitmap`
+1111111111111111
+0000000000000000
+................
+................
+................
+................
+................
+................
+0000000000000000
+1111111111111111
+0000000000000000
+................
+................
+................
+................
+................
+`],
+  [r12, bitmap`
+1111111111111111
+0000000000000000
+................
+................
+................
+................
+................
+................
+0000000000000000
+1111111111111111
+0000000000000000
+................
+................
+................
+................
+................
+`],
+  [r13, bitmap`
+1111111111111111
+0000000011111111
+.......011111111
+.......000000000
+......0111110000
+......0111110111
+0000111000110111
+0000111000110111
+0000111000110111
+0000111000110111
+0000111000110111
+0000111000110111
+0000111000110111
+0000111000110111
+0000111000110111
+......0000000000
+`],
+  [r14, bitmap`
+1111111111111111
+1111111111111111
+1111111111111111
+0000000001111111
+0000000001111111
+1111111101111111
+11111C1101111111
+11111C1101111111
+11111C1101111111
+11111C1101111111
+11111C1101111100
+11111C1101110CCC
+11111C1101110CC0
+11111C110110CC0C
+111111110110C0C0
+00000000010CC0C0
+`],
+  [r15, bitmap`
+1111110.........
+1111110.........
+1111110.........
+1111110.........
+1111110.........
+1111110.........
+11111100........
+11111110........
+11111110........
+01111110........
+00111110........
+C0011110........
+C001110.........
+0CC0110.........
+C0C0110.........
+CC0110..........
+`],
+  [r23, bitmap`
+.......011111111
+........00111111
+..........000000
+..........00...0
+.........010...0
+.........010...0
+........0110....
+........0110....
+........0110....
+.........010....
+.........0100...
+..........010000
+...........00000
+................
+................
+................
+`],
+  [r24, bitmap`
+111111111010C0C0
+111111110010CC0C
+111111110110C0C0
+111111001110CC0C
+111111011110C0C0
+000000011110CC0C
+.......01110C0C0
+.......01110CC0C
+......011110C0C0
+......011110CC0C
+.....0111110C0C0
+000000111110CC0C
+000000111110C0C0
+.....0111110CC0C
+......011110C0C0
+......011110CC0C
+`],
+  [r25, bitmap`
+C0C010..........
+0CC010..........
+C0C010..........
+0CC010..........
+C0C00...........
+0CC0............
+C0C0............
+0CC0............
+C0C0............
+0CC0............
+C0C0............
+0CC0............
+C0C0............
+0CC0............
+C0C0............
+0CC0............
+`],
+  [r34, bitmap`
+.......01110C0C0
+.......01110CC0C
+........000C0C0C
+..........000000
+...........0110.
+..........010010
+..........011110
+...........0000.
+................
+................
+................
+................
+................
+................
+................
+................
+`],
+  [r35, bitmap`
+C0C0............
+0CC0............
+0C0.............
+00..............
+................
+................
+................
+................
+................
+................
+................
+................
+................
+................
+................
+................
+`],
+  [r_cyl1, bitmap`
+1111111111111111
+0000000011111111
+.......011111111
+.......000000000
+......0111110000
+......0111110111
+0110001110000111
+0110001110000111
+0110001110000111
+0110001110000111
+0110001110000111
+0110001110000111
+0110001110000111
+0110001110000111
+0110001110000111
+......0000000000
+`],
+  [r_cyl2, bitmap`
+1111111111111111
+0000000011111111
+.......011111111
+.......000000000
+......0111110000
+......0111110111
+0111100011100111
+0111100011100111
+0111100011100111
+0111100011100111
+0111100011100111
+0111100011100111
+0111100011100111
+0111100011100111
+0111100011100111
+......0000000000
+`],
+  [r_cyl3, bitmap`
+1111111111111111
+0000000011111111
+.......011111111
+.......000000000
+......0111110000
+......0111110111
+0000111000110111
+0000111000110111
+0000111000110111
+0000111000110111
+0000111000110111
+0000111000110111
+0000111000110111
+0000111000110111
+0000111000110111
+......0000000000
+`],
+
+  [rrBang, bitmap`
+......5555......
+....55555555....
+...5555445555...
+..555544445555..
+.55554444445555.
+.55554422445555.
+.55544422444555.
+.55544222244555.
+.55544222244555.
+.55554422445555.
+.55554444445555.
+..555544445555..
+...5555445555...
+....55555555....
+......5555......
 ................
 `],
   [skull, bitmap`
@@ -881,6 +1266,23 @@ C33330033033333C
 ................
 ................
 `],
+  [wild, bitmap`
+..3........3....
+..33......33....
+..33......33....
+..33..33..33....
+..33..33..33....
+...33.33.33.....
+...33.33.33.....
+...33.33.33.....
+....333333......
+....333333......
+....33..33......
+.....3..3.......
+................
+................
+................
+................`],
   [slotHandleDown, bitmap`
 ................
 66..............
@@ -1417,7 +1819,11 @@ const blankMap = map`
 ..........`;
 setMap(blankMap);
 let bgmPlayback = null, bgmTimer = null;
-let bank = 150, jackpot = randJackpot();
+let bank = 150, jackpot = randJackpot(), debt = 0, sharkDeadline = 0;
+let sharkDealType = 0, rrBullet = 0, rrPulls = 0, rrWinnings = 0;
+let rrAnimTicks = 0, rrAnimTimer = null, rrAnimResult = false;
+let rrSpinOffset = 0;
+let offeredDeal = 0;
 let state = "title";
 let reels = [cherry, lemon, seven], finalReels = [cherry, lemon, seven];
 let currentCard = 5, nextCard = 5, cardReady = false;
@@ -1426,10 +1832,13 @@ let wheelIndex = 0, wheelSteps = 0, wheelFinal = 0, wheelDelay = 0, wheelCursor 
 let slotTimer = null, cardTimer = null, wheelTimer = null, rouletteTimer = null, fxTimer = null, transitionTimer = null, titleTimer = null;
 let tick = 0, lastStake = 0, lastStakeAllIn = false, heat = 0, fx = 0;
 let resultText = "", resultGood = false, lastGame = "none";
+let vipMode = false, autoSpinSlot = false, loanInterest = 5, loanPrincipal = 1000;
 let pendingWin = 0, pendingText = "", pendingBig = false, justRisked = false;
 let introFx = 0, moreMenu = false;
 let bjPlayer = [], bjDealer = [], bjActive = false, bjDone = false, bjDealerHidden = false, bjDealing = false, bjMsg = "";
-const rouTypes = ["RED", "BLACK", "ODD", "EVEN", "LOW", "HIGH", "NUM"];
+let bjPlayer2 = [], bjActive2 = false, bjCurrentHand = 1, bjSplitStake = 0;
+const rouTypes = ["RED", "BLACK", "ODD", "EVEN", "LOW", "HIGH", "1-12", "13-24", "25-36", "NUM"];
+let rouBets = [];
 let rouTypeIndex = 0, rouPick = 7, rouResult = 0, rouMsg = "", rouColor = "RED", rouSpinFrame = 0;
 let bingoCard = [], bingoMarks = [], bingoBalls = [], bingoStarted = false, bingoDone = false, bingoMsg = "", bingoLast = 0, bingoBad = 0;
 let bingoC = 0, bingoR = 0, bingoDrawing = false, bingoTimer = null;
@@ -1442,6 +1851,8 @@ const HOT_MULT_POOL = [[1, 10], [2, 22], [3, 20], [4, 14], [5, 10], [6, 7],
   [8, 5], [10, 4], [15, 3], [20, 2], [25, 2], [30, 1]];
 const BOOST_MULT_POOL = [[1, 14], [2, 30], [3, 22], [4, 12], [5, 8], [6, 5],
   [8, 3], [10, 2], [15, 2], [20, 1], [30, 1]];
+const HOT_BOOST_MULT_POOL = [[1, 5], [2, 10], [3, 15], [4, 18], [5, 15], [6, 12],
+  [8, 10], [10, 8], [15, 5], [20, 4], [25, 2], [30, 2]];
 const BOOST_POOL = [[1.5, 76], [2, 60], [3, 36], [4, 16], [5, 8], [8, 3], [10, 1]];
 function wheelTypeForMult(mult) {
   if (mult === 1) return w1;
@@ -1484,8 +1895,8 @@ const STAKE_TIERS = [
   [30000, [1000, 2500, 5000, 7500, 10000, 15000, 20000, 25000, "ALL"]], 
   [Infinity, [2500, 5000, 10000, 15000, 20000, 30000, 40000, 50000, "ALL"]]
 ];
-const SLOT_TRIPLES = [[seven, "JACKPOT", 0, 3, true], [bar, "BAR", 15, 2, true],
-  [bell, "BELL", 8, 2, true], [lemon, "WIN", 4, 1, false], [cherry, "WIN", 2, 1, false]];
+const SLOT_TRIPLES = [[seven, "JACKPOT", 0, 3, true], [bar, "BAR", 20, 2, true],
+  [bell, "BELL", 12, 2, true], [lemon, "WIN", 4, 1, false], [cherry, "WIN", 2, 1, false]];
 function randInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
 function randJackpot() { return randInt(450, 850);
 }
@@ -1537,12 +1948,25 @@ function duckBgm(delay) {
   }, delay);
 }
 function playSound(t, delay = 0) { if (delay > 0) duckBgm(delay); playTune(t); }
-function goBust() { stopBgm(); state = "bust"; playTune(bustSfx);
-  render(); }
+function goBust(forced = false) { 
+  stopBgm(); 
+  if (forced || bank <= -5000 || debt > 0) {
+    state = "bust"; playTune(bustSfx);
+  } else {
+    state = "loan_shark"; playTune(loseSfx);
+    const r = Math.random();
+    if (r < 1.0) offeredDeal = 3;
+    else if (r < 0.60) offeredDeal = 1;
+    else offeredDeal = 2;
+  }
+  render(); 
+}
 function updateStakes() {
   const oldStake = stakes[stakeIndex];
-  const tierStakes = STAKE_TIERS.find(([limit]) => bank < limit)[1];
-  stakes = tierStakes.filter(s => s === "ALL" || s < bank);
+  const tierStakes = STAKE_TIERS.find(([limit]) => bank < limit || limit === Infinity)[1];
+  let rawStakes = tierStakes;
+  if (vipMode) rawStakes = rawStakes.map(s => s === "ALL" ? s : s * 10);
+  stakes = rawStakes.filter(s => s === "ALL" || s <= (bank < 0 ? Infinity : bank));
   if (oldStake === "ALL") {
     stakeIndex = stakes.length - 1;
     return;
@@ -1578,7 +2002,14 @@ function rightText(text) { return Math.max(0, TEXT_W - text.length);
 }
 function textUnderSprite(spriteX, text) { return Math.max(0, Math.round(spriteX * 2 + 1 - text.length / 2));
 }
-function clampHeat() { heat = Math.max(0, Math.min(8, heat)); }
+function clampHeat() {
+  if (vipMode) {
+    const minHeat = Math.min(10, Math.floor(bank / 100000));
+    if (heat < minHeat) heat = minHeat;
+  }
+  if (heat < 0) heat = 0;
+  if (heat > 10) heat = 10;
+}
 function stakeLabel() { const s = stakes[stakeIndex]; return s === "ALL" ?
   "ALL" : "" + s; }
 function stakeValue() { const s = stakes[stakeIndex]; return s === "ALL" ?
@@ -1691,7 +2122,14 @@ function drawFx() {
     ? [[1, 2, spark], [7, 2, spark], [1, 5, spark], [7, 5, spark]]
     : [[2, 2, spark], [6, 2, spark], [2, 5, spark], [6, 5, spark]]);
 }
-function drawHud() { const betText = "BET " + stakeLabel(); txt("BANK " + fmt(bank), 1, 1, color`4`); txtR(betText, 1, color`3`);
+function drawHud() {
+  const betText = "BET " + stakeLabel();
+  txt("BANK " + fmt(bank), 1, 1, color`4`);
+  txtR(betText, 1, color`3`);
+  if (debt > 0) {
+    txt("DEBT " + fmt(debt), 0, 0, color`8`);
+    txtR(sharkDeadline + " LEFT", 0, color`7`);
+  }
 }
 function drawTitle() {
   prepScreen(false);
@@ -1713,8 +2151,12 @@ function drawTitle() {
 }
 function drawLobby() {
   prepScreen(true);
+  
+  if (bank >= 100000 && debt === 0) txt("H VIP", 0, 0, vipMode ? color`6` : color`4`);
+  if (bank >= 1000000 && debt === 0) txtR("W BUY CASINO", 0, color`6`);
+  
   if (!moreMenu) {
-    txtC("CASINO 1/2", 3, color`6`);
+    txtC(vipMode ? "VIP CASINO 1/2" : "CASINO 1/2", 3, color`6`);
     sprs([[1, 4, cherry], [2, 4, lemon], [3, 4, seven], [5, 4, cardSprite(5)], [8, 4, wheelIcon]]);
     txt("J", 2, 7, color`2`); txt("I", 11, 7, color`2`); txt("L", 17, 7, color`2`);
     txt("SLOT", 1, 10, color`D`); txt("CARD", 9, 10, color`8`);
@@ -1722,7 +2164,7 @@ function drawLobby() {
     txtC("JACKPOT " + fmt(jackpot), 12, color`6`);
     txt("K PAGE 2", 1, 14, color`H`); txtR("A/D BET", 14, color`H`);
   } else {
-    txtC("CASINO 2/2", 3, color`6`);
+    txtC(vipMode ? "VIP CASINO 2/2" : "CASINO 2/2", 3, color`6`);
     sprs([[1, 4, bjIcon], [4, 4, rouletteIcon], [7, 4, bingoIcon]]);
     txt("J", 2, 7, color`2`); txt("I", 8, 7, color`2`); txt("L", 14, 7, color`2`);
     txt("BJ", 2, 10, color`8`); txt("ROU", 7, 10, color`3`);
@@ -1731,18 +2173,104 @@ function drawLobby() {
     txt("K PAGE 1", 1, 14, color`H`); txtR("A/D BET", 14, color`H`);
   }
 }
+function drawLoanShark() {
+  prepScreen(false);
+  txtC("I WILL SPOT YOU...", 2, color`3`);
+  
+  if (offeredDeal === 1) {
+    txtC("100K CHIPS", 4, color`6`);
+    txtC("VIP MODE ACTIVE!", 6, color`7`);
+    txtC("PAY BACK 150K", 9, color`3`);
+    txtC("IN 5 BETS OR ELSE", 10, color`3`);
+  } else if (offeredDeal === 2) {
+    txtC("1000 CHIPS", 4, color`6`);
+    txtC("5X ALL PAYOUTS!", 6, color`7`);
+    txtC("PAY BACK 10K", 9, color`3`);
+    txtC("IN 10 BETS OR ELSE", 10, color`3`);
+  } else {
+    txtC("BUT WE PLAY", 4, color`6`);
+    txtC("RUSSIAN ROULETTE", 6, color`7`);
+    txtC("WIN HUGE OR", 9, color`3`);
+    txtC("INSTANT DEATH", 10, color`3`);
+  }
+  
+  txt("J ACCEPT", 0, 14, color`7`);
+  txtR("K DENY", 14, color`3`);
+}
+function drawRrGunFrame() {
+  sprs([
+    [2, 1, r00], [3, 1, r01], [4, 1, r02], [5, 1, r03], [6, 1, r04], [7, 1, r05],
+    [2, 2, r10], [3, 2, r11], [4, 2, r12],              [6, 2, r14], [7, 2, r15],
+                                           [5, 3, r23], [6, 3, r24], [7, 3, r25],
+                                                        [6, 4, r34], [7, 4, r35]
+  ]);
+}
+function drawRrCylinder(spinning, showBang) {
+  const cyls = [r13, r_cyl1, r_cyl2, r_cyl3];
+  let c = r13;
+  if (spinning) {
+    c = cyls[rrAnimTicks % 4];
+  }
+  addSprite(5, 2, c);
+  if (showBang && rrAnimResult) {
+    addSprite(1, 2, rrBang);
+    sprs([[1, 1, spark], [0, 2, spark], [1, 3, spark]]);
+  }
+}
+function drawRussianRoulette() {
+  prepScreen(false);
+  txtC("RUSSIAN ROULETTE", 1, color`3`);
+  drawRrGunFrame();
+  drawRrCylinder(false, false);
+  txtC("CHAMBERS: " + (6 - rrPulls) + "/6", 11, color`6`);
+  txtC("WIN: " + fmt(rrWinnings), 13, color`7`);
+  txt("J PULL", 0, 15, color`7`);
+  txtR("K WALK", 15, color`3`);
+}
+function drawRrAnim() {
+  prepScreen(false);
+  txtC("RUSSIAN ROULETTE", 1, color`3`);
+  drawRrGunFrame();
+  if (rrAnimTicks < 18) {
+    txtC("SPINNING...", 11, color`4`);
+    drawRrCylinder(true, false);
+  } else if (rrAnimTicks < 22) {
+    txtC("PULLING...", 11, color`4`);
+    drawRrCylinder(false, false);
+  } else {
+    if (rrAnimResult) {
+      txtC("!! BANG !!", 11, color`3`);
+      drawRrCylinder(false, true);
+    } else {
+      txtC("...click...", 11, color`6`);
+      drawRrCylinder(false, false);
+    }
+  }
+}
+function drawWinCredits() {
+  prepScreen(false);
+  txtC("YOU BOUGHT", 3, color`6`);
+  txtC("THE CASINO!", 5, color`6`);
+  txtC("YOU ARE RICH", 7, color`3`);
+  txtC("YOU WIN", 9, color`4`);
+  txtC("THANKS FOR PLAYING", 12, color`7`);
+}
 function drawSlot() {
   prepScreen(true);
   drawSlotMachine(reels[0], reels[1], reels[2], false);
+  if (heat >= 6) txtR("HOT", 5, color`3`);
   txtC("JACKPOT " + fmt(jackpot), 10, color`6`);
   txt("J SPIN", 1, 13, color`7`);
   drawBack(13);
   txtC("A/D BET", 14, color`H`);
+  txt("W AUTO " + (autoSpinSlot ? "ON" : "OFF"), 0, 15, autoSpinSlot ? color`6` : color`H`);
 }
 function drawSlotSpin() {
   prepScreen(true);
   drawSlotMachine(reels[0], reels[1], reels[2], true);
-  txtC("SPINNING", 13, color`6`);
+  if (heat >= 6) txtR("HOT", 5, color`3`);
+  txtC("JACKPOT " + fmt(jackpot), 10, color`6`);
+  txt("W AUTO " + (autoSpinSlot ? "ON" : "OFF"), 0, 15, autoSpinSlot ? color`6` : color`H`);
 }
 function drawSlotChoice() {
   prepScreen(true);
@@ -1752,7 +2280,8 @@ function drawSlotChoice() {
   }
   txtC(pendingText, 10, color`6`);
   txt("J RISK", 0, 14, color`3`);
-  txtR("L CASH", 14, color`4`);
+  txt("L TAKE", 10, 14, color`6`);
+  txt("W AUTO " + (autoSpinSlot ? "ON" : "OFF"), 0, 15, autoSpinSlot ? color`6` : color`H`);
 }
 function drawRiskRoll() {
   prepScreen(true);
@@ -1843,6 +2372,7 @@ function drawResult() {
   }
   const y = lastGame === "wheel" ? 12 : 10;
   txtC(resultText, y, resultGood ? color`6` : color`2`);
+  if (lastGame === "slot") txt("W AUTO " + (autoSpinSlot ? "ON" : "OFF"), 0, 15, autoSpinSlot ? color`6` : color`H`);
 }
 function drawLoss() {
   prepScreen(true);
@@ -1853,6 +2383,7 @@ function drawLoss() {
   const y = lastGame === "wheel" ? 12 : 10;
   txtC(resultText, y, color`3`);
   txtC("...", y + 2, color`3`);
+  if (lastGame === "slot") txt("W AUTO " + (autoSpinSlot ? "ON" : "OFF"), 0, 15, autoSpinSlot ? color`6` : color`H`);
 }
 
 function bjVal(card) { return typeof card === "number" ? card : card.v;
@@ -1897,13 +2428,21 @@ function drawBlackjack() {
     drawBack(14);
     return;
   }
-  drawBjCards(bjDealer, 0, 0, bjDealerHidden);
-  drawBjCards(bjPlayer, 0, 5, false);
-  const shown = bjShownDealer();
-  
-  // Center screen info blocks
-  txt("DLR " + bjTotal(shown) + (bjDealerHidden ? "+?" : ""), 0, 6, color`3`);
-  txt("PLR " + bjTotal(bjPlayer), 0, 8, color`9`);
+  if (bjActive2) {
+    drawBjCards(bjDealer, 0, 0, bjDealerHidden);
+    drawBjCards(bjPlayer, 0, 3, false);
+    drawBjCards(bjPlayer2, 0, 5, false);
+    const shown = bjShownDealer();
+    txt("DLR " + bjTotal(shown) + (bjDealerHidden ? "+?" : ""), 0, 6, color`3`);
+    txt((bjCurrentHand === 1 && bjActive ? ">" : "") + "H1 " + bjTotal(bjPlayer), 0, 13, color`9`);
+    txt((bjCurrentHand === 2 && bjActive ? ">" : "") + "H2 " + bjTotal(bjPlayer2), 8, 13, color`9`);
+  } else {
+    drawBjCards(bjDealer, 0, 0, bjDealerHidden);
+    drawBjCards(bjPlayer, 0, 5, false);
+    const shown = bjShownDealer();
+    txt("DLR " + bjTotal(shown) + (bjDealerHidden ? "+?" : ""), 0, 6, color`3`);
+    txt("PLR " + bjTotal(bjPlayer), 0, 8, color`9`);
+  }
   
   if (bjMsg) {
     txtR(bjMsg, 7, bjMsg.indexOf("LOST") >= 0 || bjMsg.indexOf("BUST") >= 0 ? color`3` : color`6`);
@@ -1914,8 +2453,14 @@ function drawBlackjack() {
   } else if (bjActive) {
     txtR("J HIT", 7, color`7`);
     txtR("L STAND", 8, color`9`);
+    if (bjPlayer.length === 2 && !bjActive2 && bank >= lastStake) {
+      txtR("I DOUBLE", 9, color`H`);
+      if (bjVal(bjPlayer[0]) === bjVal(bjPlayer[1])) {
+        txt("W SPLIT", 0, 9, color`H`);
+      }
+    }
   } else {
-    txtR("J NEW", 7, color`7`);
+    txtR("J DEAL", 7, color`7`);
     txtR("K BACK", 8, color`9`);
   }
 }
@@ -1932,20 +2477,23 @@ function drawRouletteWheel(x, y, alt = false) {
 function drawRoulette() {
   prepScreen(false);
   txt("BANK " + fmt(bank), 1, 0, color`4`); txtR("BET " + stakeLabel(), 0, color`3`);
-  txtC("ROULETTE", 2, color`3`);
-  drawRouletteWheel(0, 3, false);
-  txt("BET", 8, 4, color`2`);
-  txt(rouBetName(), 12, 4, color`6`);
-  rouOption("RED", 7, 6, 0);
-  rouOption("BLACK", 13, 6, 1);
-  rouOption("ODD", 7, 8, 2); rouOption("EVEN", 13, 8, 3);
-  rouOption("LOW", 7, 10, 4); rouOption("HIGH", 13, 10, 5);
-  rouOption("NUM", 7, 12, 6);
-  if (rouTypeIndex === 6) txt("W/S " + (rouPick === 37 ? "00" : rouPick), 12, 12, color`H`);
-  else txt("PICK " + (rouPick === 37 ? "00" : rouPick), 12, 12, color`7`);
-  txt("J SPIN", 0, 14, color`7`);
-  txt("I TYPE", 7, 14, color`H`);
-  txtR("K BACK", 14, color`9`);
+  txtC("ROULETTE", 1, color`3`);
+  drawRouletteWheel(0, 2, false);
+  if (rouBets.length > 0) txt("BETS " + rouBets.length, 6, 3, color`9`);
+  
+  rouOption("RED", 6, 5, 0);  rouOption("BLACK", 12, 5, 1);
+  rouOption("ODD", 6, 7, 2);  rouOption("EVEN", 12, 7, 3);
+  rouOption("LOW", 6, 9, 4);  rouOption("HIGH", 12, 9, 5);
+  rouOption("1-12", 6, 11, 6); rouOption("13-24", 12, 11, 7);
+  rouOption("25-36", 6, 13, 8);
+  
+  txt((rouTypeIndex === 9 ? ">" : " ") + "NUM", 12, 13, rouTypeIndex === 9 ? color`6` : color`7`);
+  if (rouTypeIndex === 9) txt("W/S " + (rouPick === 37 ? "00" : rouPick), 12, 14, color`H`);
+  
+  txt("L ADD", 0, 14, color`6`);
+  txt("I SEL", 6, 14, color`H`);
+  txt("J SPIN", 0, 15, color`7`);
+  txtR("K BACK", 15, color`9`);
 }
 function drawRouletteSpin() {
   prepScreen(false);
@@ -2019,7 +2567,7 @@ function drawBingo() {
     txtR("K BACK", 3, color`9`);
   } else {
     txtR("L BALL", 1, color`7`);
-    txtR("J MARK", 2, color`7`);
+    txtR("J MARK", 2, color`6`);
     txtR("K BACK", 3, color`9`);
   }
 
@@ -2053,10 +2601,20 @@ function drawBust() {
   txtC("PRESS ANY KEY", 10, color`7`);
   txtC("TO RESTART", 12, color`7`);
 }
-const screens = { title: drawTitle, lobby: drawLobby, slot: drawSlot, slotSpin: drawSlotSpin,
+const screens = {
+  title: drawTitle,
+  lobby: drawLobby,
+  loan_shark: drawLoanShark,
+  russian_roulette: drawRussianRoulette,
+  rr_animating: drawRrAnim,
+  win_credits: drawWinCredits,
+  bust: drawBust,
+  slot: drawSlot,
+  slotSpin: drawSlotSpin,
   slotChoice: drawSlotChoice, riskRoll: drawRiskRoll, card: drawCard, cardRoll: drawCardRoll,
   wheel: drawWheel, wheelSpin: drawWheelSpin, blackjack: drawBlackjack, roulette: drawRoulette,
-  rouletteSpin: drawRouletteSpin, rouletteResult: drawRouletteResult, bingo: drawBingo, bingoConfirm: drawBingoConfirm, result: drawResult, loss: drawLoss, bust: drawBust };
+  rouletteSpin: drawRouletteSpin, rouletteResult: drawRouletteResult, bingo: drawBingo, bingoConfirm: drawBingoConfirm, result: drawResult, loss: drawLoss
+};
 function render() { screens[state](); }
 function weightedPick(weights) {
   let total = 0;
@@ -2087,16 +2645,26 @@ function buildWheel(boosted = false, mode = wheelMode) {
   let chipWeight = 10;
   let sparkChance = mode === "hot" ? 55 : 18;
   let sparkWeight = mode === "hot" ? 4 : 3;
-  let jackpotChance = mode === "hot" ? 65 : 25;
+  let jackpotChance = mode === "hot" ? 30 : 6;
   let jackpotWeight = mode === "hot" ? 9 : 6;
   if (boosted) {
-    skullCount = weightedPick([[1, 85], [2, 15]]);
-    multPool = BOOST_MULT_POOL;
-    skullWeight = 8;
-    chipWeight = 11;
-    sparkChance = 18;
-    sparkWeight = 2;
-    jackpotChance = 0;
+    if (mode === "hot") {
+      skullCount = weightedPick([[2, 85], [3, 15]]);
+      multPool = HOT_BOOST_MULT_POOL;
+      skullWeight = 14;
+      chipWeight = 11;
+      sparkChance = 55;
+      sparkWeight = 4;
+      jackpotChance = 15;
+    } else {
+      skullCount = weightedPick([[1, 85], [2, 15]]);
+      multPool = BOOST_MULT_POOL;
+      skullWeight = 8;
+      chipWeight = 11;
+      sparkChance = 35;
+      sparkWeight = 2;
+      jackpotChance = 0;
+    }
   } else if (mode === "safe") {
     skullCount = weightedPick([[1, 45], [2, 55]]);
     skullWeight = 24;
@@ -2167,10 +2735,10 @@ function loadWheelMode(mode) {
   }
 }
 function drawStartCard() {
-  let n = randInt(3, 7);
+  let n = randInt(4, 6);
   let tries = 0;
   while (n === lastStartCard && tries < 8) {
-    n = randInt(3, 7);
+    n = randInt(4, 6);
     tries++;
   }
   lastStartCard = n;
@@ -2196,17 +2764,43 @@ function pressure() {
   if (before <= 0) return 1;
   return lastStake / before;
 }
-function spendStake() {
-  const stake = stakeValue();
-  lastStakeAllIn = stakes[stakeIndex] === "ALL";
-  if (stake <= 0 || bank <= 0) {
-    goBust();
-    return 0;
+function spendStake(decreaseDeadline = true) {
+  let s;
+  if (lastStakeAllIn) {
+    s = bank;
+  } else {
+    s = stakes[stakeIndex];
+    if (s === "ALL") s = bank;
   }
-  bank -= stake;
-  lastStake = stake;
-  feedJackpotByBet(state, stake);
-  return stake;
+  if (s === undefined || s <= 0) return 0;
+  
+  if (debt > 0 && decreaseDeadline) {
+    sharkDeadline--;
+    if (bank >= debt) {
+      bank -= debt;
+      debt = 0;
+      sharkDeadline = 0;
+      playSound(bigWinSfx);
+    } else if (sharkDeadline < 0) {
+      goBust(true);
+      return 0;
+    }
+  }
+  
+  if (s > bank) {
+    s = bank;
+    if (s <= 0) return 0;
+  }
+  
+  if (bank > 0) {
+    bank -= s;
+    if (bank < 0) bank = 0;
+    feedJackpotByBet(state, s);
+  }
+  
+  lastStake = s;
+  lastStakeAllIn = stakes[stakeIndex] === "ALL";
+  return s;
 }
 function slotSymbol() {
   const p = pressure();
@@ -2216,7 +2810,8 @@ function slotSymbol() {
       [lemon, 29],
       [bell, 18],
       [bar, 8],
-      [seven, 2]
+      [seven, 1],
+      [wild, 1]
     ]);
   }
   if (p >= 0.3 || heat >= 3) {
@@ -2225,7 +2820,8 @@ function slotSymbol() {
       [lemon, 28],
       [bell, 21],
       [bar, 10],
-      [seven, 4]
+      [seven, 3],
+      [wild, 1]
     ]);
   }
   return weightedPick([
@@ -2233,7 +2829,8 @@ function slotSymbol() {
     [lemon, 26],
     [bell, 22],
     [bar, 14],
-    [seven, 7]
+    [seven, 5],
+    [wild, 2]
   ]);
 }
 function weightedNot(symbol) {
@@ -2244,63 +2841,34 @@ function weightedNot(symbol) {
 function makePairResult(symbol) { const out = [symbol, symbol, symbol]; out[randInt(0, 2)] = weightedNot(symbol); return out;
 }
 function makeSlotResult() {
-  const p = pressure();
-  let lose = 48;
-  let pair = 25;
-  let smallTriple = 16;
-  let bigTriple = 9;
-  let jackpotOdds = 2;
-  if (lastStakeAllIn || p >= 0.65 || heat >= 6) {
-    lose = 60;
-    pair = 22;
-    smallTriple = 10;
-    bigTriple = 6;
-    jackpotOdds = 2;
-  } else if (p >= 0.3 || heat >= 3) {
-    lose = 55;
-    pair = 23;
-    smallTriple = 13;
-    bigTriple = 7;
-    jackpotOdds = 2;
-  }
-  const outcome = weightedPick([
-    ["lose", lose],
-    ["pair", pair],
-    ["small", smallTriple],
-    ["big", bigTriple],
-    ["jackpot", jackpotOdds]
-  ]);
-  if (outcome === "jackpot") return [seven, seven, seven];
-  if (outcome === "big") {
-    return Math.random() < 0.55
-      ?
-      [bar, bar, bar]
-      : [bell, bell, bell];
-  }
-  if (outcome === "small") {
-    return Math.random() < 0.55
-      ?
-      [lemon, lemon, lemon]
-      : [cherry, cherry, cherry];
-  }
-  if (outcome === "pair") {
-    const symbol = weightedPick([
-      [cherry, 48],
-      [lemon, 30],
-      [bell, 15],
-      [bar, 6],
-      [seven, 1]
-    ]);
-    return makePairResult(symbol);
-  }
   let a = slotSymbol();
-  let b = weightedNot(a);
-  let c = weightedNot(b);
+  let b = slotSymbol();
+  let c = slotSymbol();
   let tries = 0;
-  while ((a === b || b === c || a === c) && tries < 20) {
+  while (tries < 20) {
+    const syms = [a, b, c].filter(s => s !== wild);
+    const isTrip = (syms.length <= 1) || (syms.length === 2 && syms[0] === syms[1]) || (syms.length === 3 && syms[0] === syms[1] && syms[1] === syms[2]);
+    if (isTrip) {
+      // regenerate
+    } else {
+      let isPr = false;
+      let prSym = null;
+      if (syms.length <= 2) {
+        isPr = true;
+        prSym = syms.includes(lemon) ? lemon : syms.includes(cherry) ? cherry : syms[0];
+      } else if (syms[0] === syms[1] || syms[1] === syms[2] || syms[0] === syms[2]) {
+        isPr = true;
+        prSym = syms[0] === syms[1] ? syms[0] : syms[1] === syms[2] ? syms[1] : syms[0];
+      }
+      if (isPr) {
+        if (prSym !== cherry && prSym !== lemon) break;
+      } else {
+        break;
+      }
+    }
     a = slotSymbol();
-    b = weightedNot(a);
-    c = weightedNot(b);
+    b = slotSymbol();
+    c = slotSymbol();
     tries++;
   }
   return [a, b, c];
@@ -2324,7 +2892,7 @@ function startSlotSpin() {
   state = "slotSpin";
   tick = 0;
   finalReels = makeSlotResult();
-  playSound(spinSfx, 500);
+  playSound(spinSfx, autoSpinSlot ? 0 : 500);
   render();
   slotTimer = setInterval(() => {
     tick++;
@@ -2339,7 +2907,6 @@ function startSlotSpin() {
     setTileType(5, 3, reels[2]);
     if (tick >= 50) {
       finishSlot();
-    
     }
   }, 65);
 }
@@ -2373,14 +2940,12 @@ function offerSlotWin(amount, text, big) {
 }
 function takeSlotWin() {
   if (state !== "slotChoice") return;
-  bank += pendingWin;
-  const taken = pendingWin;
-  feedJackpotByWin(taken, pendingBig);
-  pendingWin = 0;
-  pendingText = "";
-  pendingBig = false;
-  showResult(moneyText("CASH", taken), true, 1000);
-  playSound(winSfx, 900);
+  payWin(pendingWin, moneyText("WON", pendingWin), pendingBig);
+}
+function slotAutoSpinCheck() {
+  if (autoSpinSlot && bank >= stakes[stakeIndex]) {
+    setTimeout(() => { if (state === "slot") startSlotSpin(); }, 500);
+  }
 }
 function riskSlotWin() {
   if (state !== "slotChoice") return;
@@ -2403,7 +2968,6 @@ function riskSlotWin() {
       startFx();
       render();
       playSound(bigWinSfx, 1200);
-    
     } else {
       heat -= 1;
       clampHeat();
@@ -2422,16 +2986,21 @@ function riskSlotWin() {
 function scoreSlot() {
   justRisked = false;
   const [a, b, c] = reels;
-  if (a === b && b === c) {
-    const rule = SLOT_TRIPLES.find(([symbol]) => symbol === a);
+  const syms = reels.filter(s => s !== wild);
+  let isTrip = false;
+  let tripSym = null;
+  if (syms.length <= 1) { isTrip = true; tripSym = syms.length === 1 ? syms[0] : seven; }
+  else if (syms.length === 2 && syms[0] === syms[1]) { isTrip = true; tripSym = syms[0]; }
+  else if (syms.length === 3 && syms[0] === syms[1] && syms[1] === syms[2]) { isTrip = true; tripSym = syms[0]; }
+  if (isTrip) {
+    const rule = SLOT_TRIPLES.find(([symbol]) => symbol === tripSym);
     if (rule) {
       const [symbol, label, mult, heatGain, big] = rule;
-      const jackpotPrize = lastStake < 10 ? Math.floor(jackpot * 0.5) : jackpot;
-      const payout = symbol === seven ?
-      lastStake + jackpotPrize : lastStake * mult;
+      const prizePercent = Math.min(1.0, lastStake / 10.0);
+      const jackpotPrize = Math.floor(jackpot * prizePercent);
+      const payout = (symbol === seven ? lastStake + jackpotPrize : lastStake * mult) * (sharkDealType === 2 && sharkDeadline > 0 ? 5 : 1);
       if (symbol === seven) {
-        lastStake < 10 ?
-        reduceJackpot(jackpotPrize) : resetJackpot();
+        reduceJackpot(jackpotPrize);
       }
       heat += heatGain;
       clampHeat();
@@ -2439,12 +3008,26 @@ function scoreSlot() {
       return;
     }
   }
-  if (a === b || b === c || a === c) {
-    const refund = Math.floor(lastStake * 0.75);
-    bank += refund;
-    showResult(moneyText("PAIR", refund), false, 1100);
-    playTune(tickSfx);
-    return;
+  let isPr = false;
+  let prSym = null;
+  if (syms.length <= 2) { 
+    isPr = true;
+    prSym = syms.includes(lemon) ? lemon : syms.includes(cherry) ? cherry : syms[0];
+  } else if (syms[0] === syms[1] || syms[1] === syms[2] || syms[0] === syms[2]) {
+    isPr = true;
+    prSym = syms[0] === syms[1] ? syms[0] : syms[1] === syms[2] ? syms[1] : syms[0];
+  }
+  if (isPr) {
+    if (prSym === cherry || prSym === lemon) {
+      const rate = prSym === cherry ? 0.50 : 0.85;
+      const refund = Math.floor(lastStake * rate) * (sharkDealType === 2 && sharkDeadline > 0 ? 5 : 1);
+      payWin(refund, moneyText("PAIR", refund), false);
+      return;
+    } else {
+      const refund = Math.floor(lastStake * 0.50) * (sharkDealType === 2 && sharkDeadline > 0 ? 5 : 1);
+      payWin(refund, moneyText("CLOSE!", refund), false);
+      return;
+    }
   }
   heat -= 1;
   clampHeat();
@@ -2477,12 +3060,12 @@ function cardPayoutMultiplier(choice) {
     return mult;
   }
   let winningNumbers = 0;
-  if (choice === "high") {
-    winningNumbers = 9 - currentCard;
-  } else {
-    winningNumbers = currentCard - 1;
-  }
-  let mult = 9 / winningNumbers * 0.88 + 0.2;
+    if (choice === "high") {
+      winningNumbers = 9 - currentCard;
+    } else {
+      winningNumbers = currentCard - 1;
+    }
+    let mult = winningNumbers === 0 ? 0 : 9 / winningNumbers * 0.88 + 0.2;
   if (mult < 1.45) mult = 1.45;
   if (mult > 5.5) mult = 5.5;
   mult += heat * 0.03;
@@ -2517,7 +3100,6 @@ function guessCard(choice) {
       nextCard = finalNextCard;
       setTileType(6, 3, cardSprite(nextCard));
       transitionTimer = setTimeout(() => {
-     
         resolveCardGame(choice, stake);
       }, 1300);
     }
@@ -2533,7 +3115,7 @@ function resolveCardGame(choice, stake) {
     won = nextCard < currentCard;
   }
   if (won) {
-    const payout = Math.floor(stake * cardPayoutMultiplier(choice));
+    const payout = Math.floor(stake * cardPayoutMultiplier(choice)) * (sharkDealType === 2 && sharkDeadline > 0 ? 5 : 1);
     const label = choice === "tie"
       ?
       moneyText("TIE", payout)
@@ -2606,7 +3188,7 @@ function showWheelBoostText() {
     stopFx();
     randomizeWheel(true);
     startWheelSpinFromCurrent();
-  }, 950);
+  }, 3500);
 }
 function spinWheel() {
   if (state !== "wheel") return;
@@ -2630,7 +3212,6 @@ function advanceWheelSpin() {
       wheelDelay += 85;
     } else if (wheelSteps <= 10) {
       wheelDelay += 45;
-  
     } else if (wheelSteps <= 18) {
       wheelDelay += 15;
     } else {
@@ -2646,7 +3227,6 @@ function advanceWheelSpin() {
     } else {
       advanceWheelSpin();
     }
- 
   }, wheelDelay);
 }
 function freezeWheelResult() {
@@ -2675,7 +3255,7 @@ function freezeWheelResult() {
   }
   transitionTimer = setTimeout(() => {
     finishWheel();
-  }, landed.kind === "spark" && !wheelBoosting ? 650 : 1100);
+  }, landed.kind === "spark" && !wheelBoosting ? 1800 : 1800);
 }
 function finishWheel() {
   clearTransition();
@@ -2740,7 +3320,7 @@ function finishWheel() {
     showResult(moneyText("1X", lastStake), false, 1100);
     return;
   }
-  const payout = Math.floor(lastStake * landed.mult * wheelBoost);
+  const payout = Math.floor(lastStake * landed.mult * wheelBoost) * (sharkDealType === 2 && sharkDeadline > 0 ? 5 : 1);
   heat += landed.mult >= 5 || wheelBoost >= 3 ? 2 : 1;
   clampHeat();
   const label = landed.mult + "X";
@@ -2757,7 +3337,7 @@ function payWin(amount, text, big, feedJackpot = true) {
   if (feedJackpot) {
     feedJackpotByWin(amount, big);
   }
-  showResult(text, true, big ? 1500 : 1200);
+  showResult(text, true, big ? 3000 : 2000);
 }
 function finishRoundToLobby(currentState) {
   stopFx();
@@ -2775,13 +3355,18 @@ function finishRoundToLobby(currentState) {
       randomizeWheel(false);
       state = "wheel";
     } else if (lastGame === "card") {
-      prepareCardRound();
+      currentCard = nextCard;
+      nextCard = 5;
+      cardReady = true;
       state = "card";
     } else {
       state = "lobby";
     }
     render();
     startBgm();
+    
+    // Auto-spin check after returning to slots
+    slotAutoSpinCheck();
   }
 }
 function showResult(text, good, delay) {
@@ -2837,33 +3422,72 @@ function openBlackjack() {
 function resetBlackjack() {
   bjPlayer = [];
   bjDealer = [];
+  bjPlayer2 = [];
   bjActive = false;
+  bjActive2 = false;
+  bjCurrentHand = 1;
+  bjSplitStake = 0;
   bjDone = false;
   bjDealerHidden = false;
   bjDealing = false;
   bjMsg = "";
   updateStakes();
 }
-function bjDraw() { return { v: randInt(1, 13), s: bjSuits[randInt(0, bjSuits.length - 1)] };
+let bjDeck = [];
+function bjDraw() {
+  if (bjDeck.length < 15) {
+    bjDeck = [];
+    for(let v=1; v<=13; v++) for(let s of bjSuits) bjDeck.push({v,s});
+    shuffleList(bjDeck);
+  }
+  return bjDeck.pop();
+}
+function bjResolveHand(hand, stake) {
+  const p = bjTotal(hand), d = bjTotal(bjDealer);
+  if (p > 21) return { res: "BUST", won: -stake };
+  if (d > 21 || p > d) return { res: "WIN", won: stake, payout: (stake * 2) * (sharkDealType === 2 && sharkDeadline > 0 ? 5 : 1) };
+  if (p === d) return { res: "PUSH", won: 0, payout: stake * (sharkDealType === 2 && sharkDeadline > 0 ? 5 : 1) };
+  return { res: "LOST", won: -stake };
 }
 function bjResolve() {
-  const p = bjTotal(bjPlayer), d = bjTotal(bjDealer);
   bjActive = false; bjDone = true; bjDealerHidden = false;
-  if (p > 21) {
-    heat -= 1; clampHeat(); bjMsg = "BUST LOST " + fmt(lastStake);
-    if (bank <= 0) goBust(); else { playSound(loseSfx, 1200); render(); }
-    return;
-  }
-  if (d > 21 || p > d) {
-    const payout = lastStake * 2;
-    bank += payout; feedJackpotByWin(payout, false); heat += 1; clampHeat();
-    bjMsg = moneyText("WIN", payout); playSound(winSfx, 900);
-  } else if (p === d) {
-    bank += lastStake; bjMsg = "PUSH 0"; playTune(tickSfx);
+  let totalWon = 0;
+  let totalPayout = 0;
+  
+  const r1 = bjResolveHand(bjPlayer, lastStake);
+  totalWon += r1.won;
+  if (r1.payout) totalPayout += r1.payout;
+  
+  let msg = "H1 " + r1.res;
+  
+  if (bjActive2) {
+    const r2 = bjResolveHand(bjPlayer2, bjSplitStake);
+    totalWon += r2.won;
+    if (r2.payout) totalPayout += r2.payout;
+    msg += " H2 " + r2.res;
   } else {
-    heat -= 1; clampHeat(); bjMsg = "LOST " + fmt(lastStake);
-    if (bank <= 0) goBust(); else playSound(loseSfx, 1200);
+    msg = r1.res === "BUST" ? "BUST LOST " + fmt(lastStake) : 
+          r1.res === "WIN" ? moneyText("WIN", totalPayout) : 
+          r1.res === "PUSH" ? "PUSH 0" : "LOST " + fmt(lastStake);
   }
+  
+  if (totalPayout > 0) {
+    bank += totalPayout;
+  }
+  
+  if (totalWon > 0) {
+    jackpot += Math.max(1, Math.floor(totalWon * 0.03));
+    heat += 1; clampHeat();
+    playSound(winSfx, 900);
+  } else if (totalWon < 0) {
+    heat -= 1; clampHeat();
+    if (bank <= 0) { goBust(); return; }
+    playSound(loseSfx, 1200);
+  } else {
+    playTune(tickSfx);
+  }
+  
+  bjMsg = msg;
   updateStakes();
   render();
 }
@@ -2895,11 +3519,20 @@ function bjStartDeal(stake) {
     bjMsg = "";
     bjActive = true;
     if (bjTotal(bjPlayer) === 21) {
-      const payout = Math.floor(stake * 2.5);
-      bank += payout;
-      feedJackpotByWin(payout, true); heat += 2; clampHeat();
-      bjActive = false; bjDone = true; bjDealerHidden = false; bjMsg = moneyText("BLACKJACK", payout);
-      playSound(bigWinSfx, 1200);
+      bjActive = false; bjDealerHidden = false;
+      if (bjTotal(bjDealer) === 21) {
+        const payout = stake * (sharkDealType === 2 && sharkDeadline > 0 ? 5 : 1);
+        bank += payout;
+        bjDone = true; bjMsg = "PUSH 0";
+        playTune(tickSfx);
+      } else {
+        const payout = Math.floor(stake * 2.5) * (sharkDealType === 2 && sharkDeadline > 0 ? 5 : 1);
+        bank += payout;
+        jackpot += Math.max(1, Math.floor((payout - stake) * 0.05));
+        heat += 2; clampHeat();
+        bjDone = true; bjMsg = moneyText("BLACKJACK", payout);
+        playSound(bigWinSfx, 1200);
+      }
     }
     updateStakes();
     render();
@@ -2907,31 +3540,95 @@ function bjStartDeal(stake) {
   render();
   transitionTimer = setTimeout(step, 220);
 }
+function bjSplit() {
+  if (state !== "blackjack" || !bjActive || bjDealing || bjActive2) return;
+  if (bjPlayer.length !== 2 || bjVal(bjPlayer[0]) !== bjVal(bjPlayer[1])) return;
+  if (bank < lastStake) return;
+  bank -= lastStake;
+  bjSplitStake = lastStake;
+  feedJackpotByBet(state, lastStake);
+  
+  bjPlayer2 = [bjPlayer.pop()];
+  bjActive2 = true;
+  bjCurrentHand = 1;
+  
+  bjPlayer.push(bjDraw());
+  bjPlayer2.push(bjDraw());
+  
+  playSound(tickSfx);
+  render();
+}
 function bjAction() {
-  if (state !== "blackjack" || bjDealing) return;
-  if (bjDone) { resetBlackjack(); render(); return;
+  if (state !== "blackjack" || !bjActive || bjDealing) {
+    if (bjDone && !bjDealing) { resetBlackjack(); render(); }
+    else if (!bjActive && !bjDealing) {
+      const stake = spendStake();
+      if (stake > 0) bjStartDeal(stake);
+    }
+    return;
   }
-  if (!bjActive) {
-    const stake = spendStake();
-    if (stake === 0) return;
-    bjStartDeal(stake);
-  } else {
-    bjPlayer.push(bjDraw());
-    if (bjTotal(bjPlayer) >= 21) bjStand();
-    else { playTune(tickSfx); render(); }
+  const currentHand = bjCurrentHand === 1 ? bjPlayer : bjPlayer2;
+  if (currentHand.length >= 8) return;
+  currentHand.push(bjDraw());
+  playTune(tickSfx);
+  if (bjTotal(currentHand) >= 21) {
+    bjStand();
   }
+  render();
+}
+function bjDoubleDown() {
+  if (state !== "blackjack" || !bjActive || bjDealing || bjActive2) return;
+  if (bjPlayer.length !== 2) return;
+  if (bank < lastStake) return;
+  bank -= lastStake;
+  feedJackpotByBet(state, lastStake);
+  lastStake *= 2;
+  updateStakes();
+  bjPlayer.push(bjDraw());
+  playTune(tickSfx);
+  render();
+  bjStand();
 }
 function bjStand() {
   if (state !== "blackjack" || !bjActive || bjDealing) return;
+  if (bjActive2 && bjCurrentHand === 1) {
+    bjCurrentHand = 2;
+    playSound(tickSfx);
+    render();
+    return;
+  }
+  bjActive = false;
   bjDealerHidden = false;
-  while (bjTotal(bjDealer) < 17 && bjDealer.length < 5) bjDealer.push(bjDraw());
-  bjResolve();
+  playTune(tickSfx);
+  render();
+  const stepDealer = () => {
+    if (state !== "blackjack") return;
+    if (bjTotal(bjDealer) < 17) {
+      bjDealer.push(bjDraw());
+      playTune(tickSfx);
+      render();
+      transitionTimer = setTimeout(stepDealer, 500);
+    } else {
+      bjResolve();
+    }
+  };
+  transitionTimer = setTimeout(stepDealer, 500);
 }
 function openRoulette() {
   if (state !== "lobby") return;
   rouMsg = "";
+  rouBets = [];
   state = "roulette";
   updateStakes();
+  playSound(betSfx);
+  render();
+}
+function placeRouletteBet() {
+  if (state !== "roulette") return;
+  const stake = spendStake();
+  if (stake === 0) return;
+  const t = rouTypes[rouTypeIndex];
+  rouBets.push({ type: t, pick: rouPick, stake: stake });
   playSound(betSfx);
   render();
 }
@@ -2954,20 +3651,39 @@ function rouColorOf(n) {
   if (n === 0 || n === 37) return "GREEN";
   return [1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36].includes(n) ? "RED" : "BLACK";
 }
-function rouWins(n) {
-  const t = rouTypes[rouTypeIndex];
-  if (t === "NUM") return n === rouPick;
+function rouWins(n, t, pick) {
+  if (t === "NUM") return n === pick;
   if (n === 0 || n === 37) return false;
   if (t === "RED" || t === "BLACK") return rouColorOf(n) === t;
   if (t === "ODD") return n % 2 === 1;
   if (t === "EVEN") return n % 2 === 0;
   if (t === "LOW") return n >= 1 && n <= 18;
-  return n >= 19 && n <= 36;
+  if (t === "HIGH") return n >= 19 && n <= 36;
+  if (t === "1-12") return n >= 1 && n <= 12;
+  if (t === "13-24") return n >= 13 && n <= 24;
+  if (t === "25-36") return n >= 25 && n <= 36;
+  return false;
 }
 function spinRoulette() {
   if (state !== "roulette") return;
-  const stake = spendStake();
-  if (stake === 0) return;
+  if (rouBets.length === 0) {
+    const stake = spendStake(true);
+    if (stake === 0) return;
+    rouBets.push({ type: rouTypes[rouTypeIndex], pick: rouPick, stake: stake });
+  } else {
+    if (debt > 0) {
+      sharkDeadline--;
+      if (bank >= debt) {
+        bank -= debt;
+        debt = 0;
+        sharkDeadline = 0;
+        playSound(bigWinSfx);
+      } else if (sharkDeadline < 0) {
+        goBust(true);
+        return;
+      }
+    }
+  }
   rouMsg = "";
   rouSpinFrame = 0;
   state = "rouletteSpin";
@@ -2991,22 +3707,33 @@ function finishRoulette() {
     rouletteTimer = null;
   }
   rouResult = randInt(0, 37); rouColor = rouColorOf(rouResult);
-  const won = rouWins(rouResult), numberBet = rouTypes[rouTypeIndex] === "NUM";
-  if (won) {
-    const payout = lastStake * (numberBet ? 36 : 2);
-    bank += payout;
-    feedJackpotByWin(payout, numberBet); heat += numberBet ? 2 : 1; clampHeat();
-    rouMsg = "WIN " + fmt(payout - lastStake);
-    playSound(numberBet ? bigWinSfx : winSfx, numberBet ? 1200 : 900);
+  let totalWin = 0;
+  let totalBet = 0;
+  let maxMult = 0;
+  for (const b of rouBets) {
+    totalBet += b.stake;
+    const won = rouWins(rouResult, b.type, b.pick);
+    if (won) {
+      let mult = 2;
+      if (b.type === "NUM") mult = 36;
+      else if (b.type.includes("-")) mult = 3;
+      totalWin += (b.stake * mult) * (sharkDealType === 2 && sharkDeadline > 0 ? 5 : 1);
+      if (mult > maxMult) maxMult = mult;
+    }
+  }
+  if (totalWin > 0) {
+    payWin(totalWin, "WIN " + fmt(totalWin - totalBet), maxMult >= 36);
+    heat += maxMult >= 36 ? 2 : 1; clampHeat();
   } else {
     heat -= 1; clampHeat();
-    rouMsg = "LOST " + fmt(lastStake);
+    rouMsg = "LOST " + fmt(totalBet);
     if (bank <= 0) { goBust(); return; }
     playSound(loseSfx, 1200);
+    state = "rouletteResult";
+    updateStakes();
+    render();
   }
-  state = "rouletteResult";
-  updateStakes();
-  render();
+  rouBets = [];
 }
 function openBingo() {
   if (state !== "lobby") return;
@@ -3086,10 +3813,11 @@ function startBingoRound() {
   bingoStarted = true; bingoMsg = ""; bingoC = 0; bingoR = 0; bingoBad = 0;
   return true;
 }
-function bingoDrawBall() {
+function bingoDrawBall(isExtra = false) {
   if (state !== "bingo" || bingoDone || bingoDrawing) return;
   if (!bingoStarted) { bingoMsg = "J PLAY"; render(); return; }
-  if (bingoBalls.length >= 40) { bingoDone = true; bingoMsg = "GAME OVER"; playTune(loseSfx); render(); return; }
+  if (bingoLast === -99) { bingoMsg = "USE WILD FIRST!"; playTune(loseSfx); render(); return; }
+  if (bingoBalls.length >= 40 && !isExtra) { bingoDone = true; bingoMsg = "GAME OVER"; playTune(loseSfx); render(); return; }
   let n, cardNums = [];
   for (let r = 0; r < 5; r++) {
     for (let c = 0; c < 5; c++) {
@@ -3148,10 +3876,10 @@ function bingoAction() {
     if (bingoHasLine()) {
       const balls = bingoBalls.length;
       const mult = Math.max(2, Math.min(25, Math.floor(120 / balls)));
-      let payout = lastStake * mult, jackWon = false;
+      let payout = (lastStake * mult) * (sharkDealType === 2 && sharkDeadline > 0 ? 5 : 1), jackWon = false;
       if (balls <= 15) {
         const jackPrize = lastStake < 10 ? Math.floor(jackpot * 0.25) : (lastStake < 25 ? Math.floor(jackpot * 0.5) : jackpot);
-        payout += jackPrize;
+        payout += jackPrize * (sharkDealType === 2 && sharkDeadline > 0 ? 5 : 1);
         if (jackPrize === jackpot) resetJackpot(); else reduceJackpot(jackPrize);
         jackWon = true;
       }
@@ -3177,6 +3905,11 @@ function newGame() {
   stopFx();
   bank = 150;
   resetJackpot();
+  debt = 0;
+  sharkDeadline = 0;
+  sharkDealType = 0;
+  offeredDeal = 0;
+  vipMode = false;
   stakeIndex = 1;
   updateStakes();
   state = "lobby";
@@ -3255,140 +3988,200 @@ function titleOrBust() {
   }
   return false;
 }
-onInput("a", () => {
-  if (titleOrBust()) return;
-  wakeBgm();
-  if (state === "bingo" && bingoStarted && !bingoDone) bingoMove(-1, 0);
-  else if (state !== "slotChoice" && state !== "bingoConfirm") prevStake();
-});
-onInput("d", () => {
-  if (titleOrBust()) return;
-  wakeBgm();
-  if (state === "bingo" && bingoStarted && !bingoDone) bingoMove(1, 0);
-  else if (state !== "slotChoice" && state !== "bingoConfirm") nextStake();
-});
-onInput("j", () => {
-  if (titleOrBust()) return;
-  wakeBgm();
-  if (state === "bingoConfirm") {
-    resetBingo();
-    goLobby();
-    return;
-  }
-  if (state === "lobby") {
-    moreMenu ? openBlackjack() : openSlot();
-  } else if (state === "card") {
-    guessCard("low");
-  } else if (state === "slotChoice") {
-    riskSlotWin();
-  } else if (state === "slot") {
-    startSlotSpin();
-  } else if (state === "wheel") {
-    spinWheel();
-  } else if (state === "blackjack") {
-    bjAction();
-  } else if (state === "roulette") {
-    spinRoulette();
-  } else if 
-  (state === "rouletteResult") {
-    rouMsg = "";
-    state = "roulette";
-    updateStakes();
-    render();
-  } else if (state === "bingo") {
-    if (bingoBalls.length >= 40 && !bingoDone) {
-      bingoDone = true; bingoMsg = "GAME OVER"; playTune(loseSfx); render();
-    } else {
-      bingoAction();
+const InputStateHandlers = {
+  lobby: {
+    a: () => prevStake(),
+    d: () => nextStake(),
+    j: () => moreMenu ? openBlackjack() : openSlot(),
+    i: () => moreMenu ? openRoulette() : startCard(),
+    k: () => { moreMenu = !moreMenu; playSound(tickSfx); render(); },
+    l: () => moreMenu ? openBingo() : startWheel(),
+    h: () => { if (bank >= 100000) { vipMode = !vipMode; clampHeat(); updateStakes(); playTune(tickSfx); render(); } },
+    w: () => { if (bank >= 1000000) { state = "win_credits"; playTune(winSfx); render(); } }
+  },
+  loan_shark: {
+    j: () => { 
+      if (offeredDeal === 1) {
+        bank += 100000; debt = 150000; sharkDeadline = 5; sharkDealType = 1; vipMode = true; state = "lobby"; updateStakes(); playSound(betSfx); render(); startBgm();
+      } else if (offeredDeal === 2) {
+        bank += 1000; debt = 10000; sharkDeadline = 10; sharkDealType = 2; state = "lobby"; updateStakes(); playSound(betSfx); render(); startBgm();
+      } else {
+        rrBullet = randInt(1, 6); rrPulls = 0; rrWinnings = 0; state = "russian_roulette"; playTune(loseSfx); render();
+      }
+    },
+    k: () => { state = "bust"; playTune(bustSfx); render(); }
+  },
+  russian_roulette: {
+    j: () => {
+      state = "rr_animating";
+      rrPulls++;
+      rrAnimTicks = 0;
+      rrSpinOffset = 0;
+      rrAnimResult = (rrPulls === rrBullet);
+      playSound(tickSfx);
+      render();
+      rrAnimTimer = setInterval(() => {
+        rrAnimTicks++;
+        if (rrAnimTicks < 18) {
+          rrSpinOffset = (rrSpinOffset + 1) % 6;
+          if (rrAnimTicks % 2 === 0) playTune(tickSfx2);
+          render();
+        } else if (rrAnimTicks < 22) {
+          render();
+        } else if (rrAnimTicks === 22) {
+          if (rrAnimResult) {
+            playSound(bustSfx);
+          } else {
+            playSound(winSfx);
+            rrWinnings += 25000;
+          }
+          render();
+        } else if (rrAnimTicks >= 32) {
+          clearInterval(rrAnimTimer);
+          if (rrAnimResult) {
+            goBust(true);
+          } else {
+            state = "russian_roulette";
+            render();
+          }
+        }
+      }, 100);
+    },
+    k: () => {
+      bank += rrWinnings;
+      state = "lobby";
+      updateStakes();
+      playSound(bigWinSfx);
+      render();
+      startBgm();
     }
-  }
-});
-onInput("i", () => {
-  if (titleOrBust()) return;
-  if (state === "bingoConfirm") return;
-  wakeBgm();
-  if (state === "lobby") {
-    moreMenu ? openRoulette() : startCard();
-  } else if (state === "card") {
-    guessCard("tie");
-  } else if (state === "wheel") {
-    toggleWheelMode();
-  } else if (state === "roulette") {
-    cycleRouletteType();
-  } else if (state === "bingo" && bingoDone) {
-    resetBingo();
-    render();
-  }
-});
-onInput("k", () => {
-  if (titleOrBust()) return;
-  wakeBgm();
-
-  if (state === "bingoConfirm") {
-    state = "bingo";
-    render();
-    return;
-  }
-
-  if (state === "blackjack" && (bjActive || bjDealing)) return;
-  if (state === "rouletteSpin") return;
-  if (state === "slotChoice" || state === "slotSpin" || state === "riskRoll" || state === "cardRoll" || state === "wheelSpin") return;
-
-  if (state === "bingo" && bingoStarted && !bingoDone) {
-    state = "bingoConfirm";
-    render();
-    return;
-  }
-
-  if (state === "lobby") {
-    moreMenu = !moreMenu;
-    playSound(tickSfx);
-    render();
-  } else if (state === "slot" || state === "card" || state === "wheel" ||
-             state === "blackjack" || state === "roulette" || state === "rouletteResult" || state === "bingo") {
-    goLobby();
-  }
-});
-onInput("l", () => {
-  if (titleOrBust()) return;
-  if (state === "bingoConfirm") return;
-  wakeBgm();
-  if (state === "lobby") {
-    moreMenu ? openBingo() : startWheel();
-  } else if (state === "card") {
-    guessCard("high");
-  } else if (state === "slotChoice") {
-    takeSlotWin();
-  } else if (state === "blackjack") {
-    bjStand();
-  } else if (state === "bingo") {
-    if (bingoBalls.length >= 40 && !bingoDone) {
-      const cost = Math.max(3, Math.floor(lastStake * 0.2));
-      if (bingoNearMiss() && bingoBalls.length < 45 && bank >= cost) {
-        bank -= cost;
-        jackpot += Math.floor(cost * 0.5);
-        updateStakes();
+  },
+  rr_animating: {},
+  win_credits: {},
+  slotChoice: {
+    j: () => riskSlotWin(),
+    l: () => takeSlotWin(),
+    w: () => { autoSpinSlot = !autoSpinSlot; playSound(tickSfx); render(); }
+  },
+  slot: {
+    a: () => prevStake(),
+    d: () => nextStake(),
+    j: () => startSlotSpin(),
+    k: () => goLobby(),
+    w: () => { autoSpinSlot = !autoSpinSlot; playSound(tickSfx); render(); slotAutoSpinCheck(); }
+  },
+  slotSpin: {
+    w: () => { autoSpinSlot = !autoSpinSlot; playSound(tickSfx); render(); }
+  },
+  result: {
+    w: () => { autoSpinSlot = !autoSpinSlot; playSound(tickSfx); render(); }
+  },
+  loss: {
+    w: () => { autoSpinSlot = !autoSpinSlot; playSound(tickSfx); render(); }
+  },
+  card: {
+    a: () => prevStake(),
+    d: () => nextStake(),
+    j: () => guessCard("low"),
+    i: () => guessCard("tie"),
+    k: () => goLobby(),
+    l: () => guessCard("high"),
+  },
+  wheel: {
+    a: () => prevStake(),
+    d: () => nextStake(),
+    j: () => spinWheel(),
+    i: () => toggleWheelMode(),
+    k: () => goLobby(),
+  },
+  blackjack: {
+    a: () => prevStake(),
+    d: () => nextStake(),
+    j: () => bjAction(),
+    i: () => bjDoubleDown(),
+    w: () => bjSplit(),
+    k: () => { if (!bjActive && !bjDealing) goLobby(); },
+    l: () => bjStand(),
+  },
+  roulette: {
+    a: () => prevStake(),
+    d: () => nextStake(),
+    w: () => changeRouletteNumber(-1),
+    s: () => changeRouletteNumber(1),
+    j: () => spinRoulette(),
+    i: () => cycleRouletteType(),
+    k: () => goLobby(),
+    l: () => {
+      const stake = spendStake(false);
+      if (stake > 0) {
+        rouBets.push({ type: rouTypes[rouTypeIndex], pick: rouPick, stake: stake });
+        playSound(tickSfx);
+        render();
+      }
+    }
+  },
+  rouletteResult: {
+    j: () => {
+      rouMsg = "";
+      state = "roulette";
+      updateStakes();
+      render();
+    },
+    k: () => goLobby(),
+  },
+  bingo: {
+    a: () => { if (bingoStarted && !bingoDone) bingoMove(-1, 0); else prevStake(); },
+    d: () => { if (bingoStarted && !bingoDone) bingoMove(1, 0); else nextStake(); },
+    w: () => bingoMove(0, -1),
+    s: () => bingoMove(0, 1),
+    j: () => {
+      if (bingoBalls.length >= 40 && !bingoDone) {
+        bingoDone = true; bingoMsg = "GAME OVER"; playTune(loseSfx); render();
+      } else {
+        bingoAction();
+      }
+    },
+    i: () => { if (bingoDone) { resetBingo(); render(); } },
+    k: () => {
+      if (bingoStarted && !bingoDone) { state = "bingoConfirm"; render(); }
+      else goLobby();
+    },
+    l: () => {
+      if (bingoBalls.length >= 40 && !bingoDone) {
+        const cost = Math.max(3, Math.floor(lastStake * 0.2));
+        if (bingoNearMiss() && bingoBalls.length < 45 && bank >= cost) {
+          bank -= cost; jackpot += Math.floor(cost * 0.5); updateStakes(); bingoDrawBall(true);
+        }
+      } else {
         bingoDrawBall();
       }
-    } else {
-      bingoDrawBall();
-    }
+    },
+  },
+  bingoConfirm: {
+    j: () => { resetBingo(); goLobby(); },
+    k: () => { state = "bingo"; render(); },
   }
-});
-onInput("w", () => {
+};
+
+function handleInput(key) {
   if (titleOrBust()) return;
-  if (state === "bingoConfirm") return;
+  if (state === "bingoConfirm" && (key !== "j" && key !== "k")) return;
   wakeBgm();
-  if (state === "bingo") bingoMove(0, -1);
-  else changeRouletteNumber(-1);
-});
-onInput("s", () => {
-  if (titleOrBust()) return;
-  if (state === "bingoConfirm") return;
-  wakeBgm();
-  if (state === "bingo") bingoMove(0, 1);
-  else changeRouletteNumber(1);
-});
+
+  const handler = InputStateHandlers[state]?.[key];
+  if (handler) {
+    handler();
+  }
+}
+
+onInput("w", () => handleInput("w"));
+onInput("a", () => handleInput("a"));
+onInput("s", () => handleInput("s"));
+onInput("d", () => handleInput("d"));
+onInput("i", () => handleInput("i"));
+onInput("j", () => handleInput("j"));
+onInput("k", () => handleInput("k"));
+onInput("l", () => handleInput("l"));
 randomizeWheel(false);
 updateStakes();
 startTitleFx();
