@@ -162,8 +162,8 @@ function gameStart() {
 }
 
 function collisionCheck(spr1, spr2) {
-  colliding = tilesWith(spr1, spr2);
-  if (colliding.length > 0) { return true; } else { return false; }
+  const colliding = tilesWith(spr1, spr2);
+  return colliding.length > 0;
 }
 
 function gameOver()
