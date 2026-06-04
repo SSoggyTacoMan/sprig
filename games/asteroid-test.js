@@ -216,7 +216,6 @@ function moveObstacles() {
 
 function superPower(){
   insuperPower = true;
-  let currentObs = getAll(obs);
   clearAll();
   spY();
   setTimeout(spB, 50);
