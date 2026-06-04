@@ -186,7 +186,7 @@ function gameOver()
 function clearAll(){
   let currentObs = getAll(obs);
   for (let i = 0; i < currentObs.length; i++){
-    clearTile(currentObs[i].x, currentObs[i].y);
+    currentObs[i].remove();
   }
 }
 
