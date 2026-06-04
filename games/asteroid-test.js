@@ -273,9 +273,9 @@ onInput("w", () => {
 
 
 afterInput(() => {
-  // console.log(getFirst(player).x + " " + getFirst(player).y);
-  if (collisionCheck(player, obs)) { clearInterval(gameLoop);
-    gameOver(); }
+  if (collisionCheck(player, obs)) {
+    gameOver();
+  }
 });
 
 function gameLoop() {
