@@ -2,7 +2,7 @@
 @title: Vermin Watch
 @description: Sprig-native Game & Watch Vermin remake.
 @author: ssoggytacoman
-@addedOn: 05/06/2026
+@addedOn: 2026/05/06
 @tags: ['retro']
 */
 
