@@ -1,9 +1,14 @@
 import { defineConfig } from 'astro/config'
 import preact from '@astrojs/preact'
-
 import svelte from '@astrojs/svelte'
 import rehypeExternalLinks from 'rehype-external-links'
 import fs from "node:fs";
+import { Buffer } from 'node:buffer';
+import buffer from 'node:buffer';
+
+if (typeof buffer.SlowBuffer === 'undefined') {
+	buffer.SlowBuffer = class SlowBuffer extends Buffer {};
+}
 import generateMetadata from "./src/integrations/generate-metadata"
 import vercel from "@astrojs/vercel"
 const gameFiles = fs.readdirSync("games").filter(f => f.endsWith(".js")).map(game => `./games/${game}`);
