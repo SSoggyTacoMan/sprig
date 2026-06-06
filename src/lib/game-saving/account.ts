@@ -7,7 +7,7 @@ import { customAlphabet } from 'nanoid'
 import { lazy } from '../utils/lazy'
 import { generateGameName } from '../words'
 import metrics from '../../../metrics'
-import { sha256Hash } from "../../lib/codemirror/util";
+import { sha256Hash } from "../utils/hash";
 
 export type { User, Session, Game, LoginCode, Snapshot, SnapshotData, SessionInfo, RoomParticipant } from './account-types'
 import type { User, Game, Snapshot, SessionInfo } from './account-types'
