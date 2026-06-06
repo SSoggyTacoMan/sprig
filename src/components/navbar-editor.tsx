@@ -1,6 +1,6 @@
 import { type Signal, useSignal, useSignalEffect } from "@preact/signals";
 import {
-	codeMirror,
+	monacoEditor,
 	type PersistenceState,
 	errorLog,
 	editSessionLength,
@@ -37,8 +37,7 @@ import { upload, uploadState } from "../lib/upload";
 import { VscLoading } from "react-icons/vsc";
 import { defaultExampleCode } from "../lib/examples";
 import beautifier from "js-beautify";
-import { collapseRanges } from "../lib/codemirror/util";
-import { foldAllTemplateLiterals, onRun} from "./big-interactive-pages/editor";
+import { onRun } from "./big-interactive-pages/editor";
 import { showKeyBinding } from '../lib/state';
 import { validateGitHubToken, forkRepository, createBranch, createCommit, fetchLatestCommitSha, createTreeAndCommit, createPullRequest, fetchForkedRepository, updateBranch, createBlobForImage } from "../lib/game-saving/github";
 
@@ -232,42 +231,25 @@ const constructGithubAuthUrl = (userId: string | null): string => {
 };
 
 const prettifyCode = () => {
-	// Check if the codeMirror is ready
-	if (!codeMirror.value) return;
+	if (!monacoEditor.value) return;
 
-	// Get the code
-	const code = codeMirror.value.state.doc.toString();
+	const code = monacoEditor.value.getValue();
 
-	// Set the options for js_beautify
 	const options = {
-		indent_size: 2, // Indent by 2 spaces
-		brace_style: "collapse,preserve-inline" as any, // Collapse braces and preserve inline
+		indent_size: 2,
+		brace_style: "collapse,preserve-inline" as any,
 	};
 
 	const { js_beautify } = beautifier;
-	// Format the code
 	const formattedCode = js_beautify(code, options);
 
-	// Create an update transaction with the formatted code
-	const updateTransaction = codeMirror.value.state.update({
-		changes: {
-			from: 0,
-			to: codeMirror.value.state.doc.length,
-			insert: formattedCode,
-		},
-	});
-
-	// Find all the matches of the code, bitmap and tune blocks
-	const matches = [...formattedCode.matchAll(/(map|bitmap|tune)`[\s\S]*?`/g)];
-
-	// Apply the update to the editor
-	codeMirror.value.dispatch(updateTransaction);
-
-	// Collapse the ranges of the matches
-	collapseRanges(
-		codeMirror.value,
-		matches.map((match) => [match.index!, match.index! + 1])
-	);
+	const model = monacoEditor.value.getModel();
+	if(model) {
+		monacoEditor.value.executeEdits("prettify", [{
+			range: model.getFullModelRange(),
+			text: formattedCode
+		}]);
+	}
 };
 
 
@@ -493,7 +475,7 @@ export default function EditorNavbar(props: EditorNavbarProps) {
 			const gameTitle = gameTitleElement.value.trim();
 			const authorName = authorNameElement.value.trim();
 			const gameDescription = gameDescriptionElement.value.trim();
-			const gameCode = codeMirror.value?.state.doc.toString() ?? "";
+			const gameCode = monacoEditor.value?.getValue() ?? "";
 			const gameControlsDescription = gameControlsDescriptionElement.value;
 
 			clearError("gameDescription");

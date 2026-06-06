@@ -1,5 +1,5 @@
 import useLocalStorage from "../../lib/hooks/use-local-storage";
-import { codeMirror, errorLog, type PersistenceState } from "../../lib/state";
+import { monacoEditor, errorLog, type PersistenceState } from "../../lib/state";
 import Button from "../design-system/button";
 import styles from "./chat-component.module.css";
 import "./chat-syntax.css";
@@ -29,7 +29,7 @@ const ChatComponent = ({ persistenceState }: ChatProps) => {
 
 	const systemPrompt = () => `Here is the current code:
 \`\`\`
-${codeMirror.value?.state.doc.toString()}
+${monacoEditor.value?.getValue()}
 \`\`\`
 
 ${errorLog.value.length > 0
@@ -109,7 +109,7 @@ Answer the questions that follow based on this unless new code is provided.`;
 					]);
 			}
 
-			const newCodeHash = await sha256Hash(codeMirror.value?.state.doc.toString()!);
+			const newCodeHash = await sha256Hash(monacoEditor.value?.getValue()!);
 			// send code as message to give context to the llm for future questions
 			// send new code only if the code has changed since the last one
 			if (newCodeHash !== codeHash) {

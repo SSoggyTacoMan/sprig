@@ -1,3 +1,5 @@
 {
-	"deno.enable": false
+	"deno.enable": false,
+	"markdown.extension.completion.enabled": false,
+	"markdown.extension.tableFormatter.enabled": false
 }

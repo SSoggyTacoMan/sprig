@@ -8,6 +8,8 @@ import generateMetadata from "./src/integrations/generate-metadata"
 import vercel from "@astrojs/vercel"
 const gameFiles = fs.readdirSync("games").filter(f => f.endsWith(".js")).map(game => `./games/${game}`);
 
+import { nodePolyfills } from 'vite-plugin-node-polyfills'
+
 export default defineConfig({
 	site: 'https://sprig.hackclub.com',
 	devToolbar: { enabled: false },
@@ -37,7 +39,11 @@ export default defineConfig({
 		optimizeDeps: {
 			exclude: ['https']
 		},
-		plugins: [],
+		plugins: [
+			nodePolyfills({
+				globals: { Buffer: true }
+			})
+		],
 		ssr: {
 			// If an import is broken in the Vercel deployment, adding it here might fix it!
 			noExternal: [ 'tinykeys' ]
