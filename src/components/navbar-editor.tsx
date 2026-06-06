@@ -1,6 +1,7 @@
 import { type Signal, useSignal, useSignalEffect } from "@preact/signals";
 import {
 	monacoEditor,
+	monacoEditorText,
 	type PersistenceState,
 	errorLog,
 	editSessionLength,
@@ -1050,7 +1051,7 @@ export default function EditorNavbar(props: EditorNavbarProps) {
 									}
 									spinnyIcon={uploadState.value === "LOADING"}
 									loading={uploadState.value === "LOADING"}
-									onClick={() => upload(codeMirror.value?.state.doc.toString() ?? "",
+									onClick={() => upload(monacoEditorText.value,
 										props.persistenceState.value.kind == "PERSISTED"
 											&& props.persistenceState.value.game != "LOADING"
 											? props.persistenceState.value.game.name
@@ -1136,8 +1137,11 @@ export default function EditorNavbar(props: EditorNavbarProps) {
 							// 'from' and 'to' represent the index of character where the selection is started to where it's ended
 							// if 'from' and 'to' are equal, then it's the cursor position
 							// from && to being -1 means the cursor is not in the editor
-							const selectionRange = codeMirror.value?.state
-								.selection.ranges[0] ?? { from: -1, to: -1 };
+							const selection = monacoEditor.value?.getSelection();
+							const selectionRange = selection ? {
+								from: monacoEditor.value.getModel()?.getOffsetAt(selection.getStartPosition()) ?? -1,
+								to: monacoEditor.value.getModel()?.getOffsetAt(selection.getEndPosition()) ?? -1
+							} : { from: -1, to: -1 };
 
 							// Store a copy of the user's code, currently active errors and the length of their editing session
 							// along with their description of the issue
@@ -1148,7 +1152,7 @@ export default function EditorNavbar(props: EditorNavbarProps) {
 								}),
 								email: props.persistenceState.value.session
 									?.user.email,
-								code: codeMirror.value?.state.doc.toString(),
+								code: monacoEditorText.value,
 								error: errorLog.value,
 								sessionLength:
 									(new Date().getTime() -
@@ -1258,14 +1262,13 @@ export default function EditorNavbar(props: EditorNavbarProps) {
 											if (resetState.value === "idle") {
 												resetState.value = "confirm";
 											} else {
-												codeMirror.value?.dispatch({
-													changes: {
-														from: 0,
-														to: codeMirror.value
-															.state.doc.length,
-														insert: defaultExampleCode,
-													},
-												});
+												const model = monacoEditor.value?.getModel();
+												if (model) {
+													monacoEditor.value.executeEdits("reset", [{
+														range: model.getFullModelRange(),
+														text: defaultExampleCode
+													}]);
+												}
 												resetState.value = "idle";
 											}
 										}}
@@ -1353,8 +1356,7 @@ export default function EditorNavbar(props: EditorNavbarProps) {
 											? props.persistenceState.value.name
 											: "sprig-game";
 									const code =
-										codeMirror.value?.state.doc.toString() ??
-										"";
+										monacoEditorText.value;
 									const url = URL.createObjectURL(
 										new Blob([code], {
 											type: "application/javascript",

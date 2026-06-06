@@ -11,7 +11,7 @@ import { runGameHeadless } from '../../lib/engine'
 const enum LastUpdater {
 	RESET,
 	OpenEditor,
-	CodeMirror
+	Monaco
 }
 export default function EditorModal() {
 	const Content = openEditor.value ? editors[openEditor.value.kind].modalContent : () => null
@@ -24,7 +24,7 @@ export default function EditorModal() {
 
 	// Sync editor text changes with code
 	useEffect(() => { 
-		if (lastUpdater === LastUpdater.CodeMirror) {
+		if (lastUpdater === LastUpdater.Monaco) {
 			setLastUpdater(LastUpdater.RESET);
 			return;
 		}
@@ -66,7 +66,7 @@ export default function EditorModal() {
 			return;
 		}
 		computeAndUpdateModalEditor();
-		setLastUpdater(LastUpdater.CodeMirror);
+		setLastUpdater(LastUpdater.Monaco);
 	}, [monacoEditorText.value]);
 
 

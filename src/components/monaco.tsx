@@ -69,6 +69,7 @@ export default function MonacoComponent(props: MonacoProps) {
 		props.onEditorView?.(editor);
 		
 		setupMonacoSprig(monacoSystem, editor);
+		monacoEditorText.value = editor.getValue();
 
 		editor.addCommand(monacoSystem.KeyMod.CtrlCmd | monacoSystem.KeyCode.Enter, () => {
 			onRunShortcutRef.current?.();

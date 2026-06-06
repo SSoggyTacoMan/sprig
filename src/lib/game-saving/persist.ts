@@ -1,6 +1,6 @@
 import type { Signal } from '@preact/signals'
 import type { Game, SessionInfo } from './account-types'
-import { codeMirror, type PersistenceState, PersistenceStateKind } from '../state'
+import { monacoEditorText, type PersistenceState, PersistenceStateKind } from '../state'
 import { executeCaptcha } from '../recaptcha'
 
 export const persist = async (persistenceState: Signal<PersistenceState>, email?: string) => {
@@ -27,7 +27,7 @@ export const persist = async (persistenceState: Signal<PersistenceState>, email?
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({
 				partialSessionEmail: email,
-				code: codeMirror.value?.state.doc.toString() ?? '',
+				code: monacoEditorText.value,
 				name: gameName,
 				tutorialName,
 				tutorialIndex,
