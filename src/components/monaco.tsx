@@ -1,15 +1,15 @@
 import { useEffect, useRef, useState } from 'preact/hooks'
 import Editor, { useMonaco } from '@monaco-editor/react'
 import type * as monaco from 'monaco-editor'
-import styles from './codemirror.module.css'
+import styles from './monaco.module.css'
 import { theme, errorLog, isNewSaveStrat, ConnectionStatus, PersistenceStateKind, monacoEditorText } from '../lib/state'
 import type { PersistenceState, RoomState, RoomParticipant } from '../lib/state'
 import { type Signal, useSignal, useSignalEffect } from '@preact/signals'
 import type { Awareness } from 'y-protocols/awareness'
-import { WebrtcProvider } from 'y-webrtc'
+import type { WebrtcProvider } from 'y-webrtc'
 import * as Y from 'yjs'
 import { startSavingGame } from './big-interactive-pages/editor'
-import { MonacoBinding } from 'y-monaco'
+import type { MonacoBinding } from 'y-monaco'
 import { setupMonacoSprig } from '../lib/monaco/widgets'
 
 interface MonacoProps {
@@ -64,7 +64,7 @@ export default function MonacoComponent(props: MonacoProps) {
 		});
 	});
 
-	function handleEditorDidMount(editor: monaco.editor.IStandaloneCodeEditor, monacoSystem: typeof monaco) {
+	async function handleEditorDidMount(editor: monaco.editor.IStandaloneCodeEditor, monacoSystem: typeof monaco) {
 		setEditorRef(editor);
 		props.onEditorView?.(editor);
 		
@@ -87,6 +87,12 @@ export default function MonacoComponent(props: MonacoProps) {
 		try {
 			props.roomState.value = { ...props.roomState.value, connectionStatus: ConnectionStatus.CONNECTING };
 			yDoc.current = new Y.Doc();
+
+			const [{ WebrtcProvider }, { MonacoBinding }] = await Promise.all([
+				import('y-webrtc'),
+				import('y-monaco')
+			]);
+
 			provider.current = new WebrtcProvider(props.roomState.value.roomId, yDoc.current, {
 				signaling: [ import.meta.env.PUBLIC_SIGNALING_SERVER_HOST as string ],
 			});
