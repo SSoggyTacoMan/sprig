@@ -26,10 +26,10 @@ export function setupMonacoSprig(monacoInst: typeof monaco, editor: monaco.edito
 
 				lenses.push({
 					range: new monacoInst.Range(
-						startLineNumber: startPos.lineNumber,
-						startColumn: startPos.column,
-						endLineNumber: endPos.lineNumber,
-						endColumn: endPos.column
+						startPos.lineNumber,
+						startPos.column,
+						endPos.lineNumber,
+						endPos.column
 					),
 					id: match.index.toString(),
 					command: {
