@@ -146,7 +146,7 @@ isMobile = mobileUserAgent(Astro.request.headers.get('user-agent') ?? '')
 	</head>
 	<body>
 		<Editor
-			client:load
+			client:only="preact"
 			persistenceState={persistenceState}
 			roomState={roomState}
 			cookies={{
