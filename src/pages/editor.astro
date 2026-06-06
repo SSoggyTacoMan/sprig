@@ -37,7 +37,7 @@ const isMobile = mobileUserAgent(Astro.request.headers.get('user-agent') ?? '')
 const review = reviewMode ? await getReviewPayload(requestUrl) : undefined
 
 // If no session and not in review mode, redirect to login
-if (!session?.session.full && !reviewMode) {
+if (!session?.session.full && !reviewMode && import.meta.env.PROD) {
 	return Astro.redirect('/login', 302)
 }
 
