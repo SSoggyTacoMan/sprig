@@ -1,4 +1,3 @@
-import type * as monaco from 'monaco-editor'
 import { type Signal, signal } from '@preact/signals'
 import { IoColorPalette, IoImage, IoMap, IoMusicalNotes } from 'react-icons/io5'
 import type { FromTo } from './codemirror/util'
@@ -113,7 +112,7 @@ export type GithubState = {
 	session: string
 }
 
-export const monacoEditor = signal<monaco.editor.IStandaloneCodeEditor | null>(null)
+export const monacoEditor = signal<any | null>(null)
 export const monacoEditorText = signal<string>('');
 export const muted = signal<boolean>(false)
 export const errorLog = signal<NormalizedError[]>([])

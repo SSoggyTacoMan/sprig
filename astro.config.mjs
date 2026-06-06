@@ -46,7 +46,7 @@ export default defineConfig({
 		],
 		ssr: {
 			// If an import is broken in the Vercel deployment, adding it here might fix it!
-			noExternal: [ 'tinykeys' ]
+			noExternal: [ 'tinykeys', 'path-browserify', 'y-monaco', 'y-webrtc' ]
 		}
 	},
 	markdown: {
