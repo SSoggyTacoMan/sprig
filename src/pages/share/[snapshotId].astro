@@ -37,7 +37,7 @@ const isMobile = mobileUserAgent(Astro.request.headers.get('user-agent') ?? '')
 			/>
 		) : (
 			<Editor
-				client:load
+				client:only="preact"
 				persistenceState={persistenceState}
 				cookies={{
 					outputAreaSize: Astro.cookies.get('outputAreaSize')?.number(),
