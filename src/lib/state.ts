@@ -211,6 +211,8 @@ export const switchTheme = (themeType: ThemeType) => {
 	const themeValue = themes[effective];
 	// set the document values
 	const documentStyle = document.body.style;
+	document.body.classList.remove('theme-dark', 'theme-light', 'theme-busker', 'theme-system');
+	document.body.classList.add(`theme-${effective}`);
 
 	documentStyle.background = themeValue?.background?? '';
 	document.documentElement.style.setProperty(`--accent`, themeValue?.accent?? '');

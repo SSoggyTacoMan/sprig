@@ -68,7 +68,7 @@ type ProcessedGame = {
 	metadataCacheHit: boolean;
 	thumbnailUpdated: boolean;
 };
-
+ d
 const getMatchValue = (match: RegExpExecArray | null) => match?.[1]?.trim() ?? "";
 
 const isValidDateString = (value: string) => {
