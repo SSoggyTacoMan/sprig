@@ -36,6 +36,20 @@ export default function EditorModal() {
 		if (model) {
 			const startPos = model.getPositionAt(_openEditor.editRange.from)
 			const endPos = model.getPositionAt(_openEditor.editRange.to)
+			const currentValInRange = model.getValueInRange({
+				startLineNumber: startPos.lineNumber,
+				startColumn: startPos.column,
+				endLineNumber: endPos.lineNumber,
+				endColumn: endPos.column
+			});
+			console.log("EXECUTE EDITS:", {
+				from: _openEditor.editRange.from,
+				to: _openEditor.editRange.to,
+				startPos,
+				endPos,
+				currentValInRange,
+				newVal: _text
+			});
 			monacoEditor.value.executeEdits("modal", [{
 				range: {
 					startLineNumber: startPos.lineNumber,
@@ -80,8 +94,8 @@ export default function EditorModal() {
 		while ((match = regex.exec(code)) !== null) {
 			editRanges.push({
 				kind: match[1],
-				from: match.index,
-				to: match.index + match[0].length
+				from: match.index + match[1].length + 1,
+				to: match.index + match[0].length - 1
 			});
 		}
 

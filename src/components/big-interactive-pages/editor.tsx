@@ -1,3 +1,7 @@
+if (typeof window !== "undefined") {
+	Object.freeze = Object.seal = Object.preventExtensions = (x) => x;
+}
+
 import styles from "./editor.module.css";
 import Monaco from "../monaco";
 import Navbar from "../navbar-editor";
@@ -18,8 +22,9 @@ import {
 	useSignalEffect,
 } from "@preact/signals";
 import { useEffect, useRef, useState, useMemo} from "preact/hooks";
-import { monacoEditor, errorLog, isNewSaveStrat, muted, type PersistenceState, type RoomState,  screenRef, cleanupRef } from "../../lib/state";
+import { monacoEditor, errorLog, isNewSaveStrat, muted, type PersistenceState, type RoomState,  screenRef, cleanupRef, showProblemsPanel, problemsPanelHeight } from "../../lib/state";
 import EditorModal from "../popups-etc/editor-modal";
+import ProblemsPanel from "./problems-panel";
 import { runGame, _performSyntaxCheck } from "../../lib/engine";
 import DraftWarningModal from "../popups-etc/draft-warning";
 import { debounce } from "throttle-debounce";
@@ -46,6 +51,7 @@ const performSyntaxCheck = () => {
 	if (res.error) {
 		errorLog.value = [];
 		errorLog.value = [res.error];
+		showProblemsPanel.value = true;
 	}
 }
 
@@ -58,6 +64,7 @@ export const onRun = async () => {
 	const code = monacoEditor.value?.getValue() ?? "";
 	const res = runGame(code, screenRef.value, (error) => {
 		errorLog.value = [...errorLog.value, error];
+		showProblemsPanel.value = true;
 	});
 
 	screenRef.value.focus();
@@ -74,6 +81,7 @@ export const onRun = async () => {
 	if (res && res.error) {
 		console.error(res.error.raw);
 		errorLog.value = [...errorLog.value, res.error];
+		showProblemsPanel.value = true;
 	}
 };
 
@@ -268,15 +276,16 @@ const exitTutorial = (persistenceState: Signal<PersistenceState>, sessionId: str
 
 export default function Editor({ persistenceState: persistenceStateProp, cookies, roomState: roomStateProp, review }: EditorProps) {
 	const persistenceState = useMemo(() => {
-		if (persistenceStateProp && ('value' in (persistenceStateProp as any))) {
+		if (persistenceStateProp && typeof (persistenceStateProp as any).peek === 'function' && typeof (persistenceStateProp as any).subscribe === 'function') {
 			return persistenceStateProp;
 		}
+		// If it's a plain object (e.g. serialized by Astro), wrap it in a client-side Signal
 		return signal(persistenceStateProp);
 	}, [persistenceStateProp]);
 
 	const roomState = useMemo(() => {
 		if (!roomStateProp) return undefined;
-		if ('value' in (roomStateProp as any)) {
+		if (typeof (roomStateProp as any).peek === 'function' && typeof (roomStateProp as any).subscribe === 'function') {
 			return roomStateProp;
 		}
 		return signal(roomStateProp);
@@ -511,6 +520,7 @@ export default function Editor({ persistenceState: persistenceStateProp, cookies
 	// Resize bar logic
 	const resizeState = useSignal<ResizeState | null>(null);
 	const horizontalResizeState = useSignal<ResizeState | null>(null);
+	const verticalResizeState = useSignal<ResizeState | null>(null);
 	useEffect(() => {
 		const onMouseMove = (event: MouseEvent) => {
 			if (!resizeState.value) return;
@@ -537,6 +547,18 @@ export default function Editor({ persistenceState: persistenceStateProp, cookies
 
 		computeCanvasScreenHeights();
 	};
+		window.addEventListener("mousemove", onMouseMove);
+		return () => window.removeEventListener("mousemove", onMouseMove);
+	}, []);
+
+	// resizes the bottom problems panel vertically
+	useEffect(() => {
+		const onMouseMove = (event: MouseEvent) => {
+			if (!verticalResizeState.value) return;
+			event.preventDefault();
+			const delta = verticalResizeState.value.startMousePos - event.clientY;
+			problemsPanelHeight.value = Math.max(100, Math.min(600, verticalResizeState.value.startValue + delta));
+		};
 		window.addEventListener("mousemove", onMouseMove);
 		return () => window.removeEventListener("mousemove", onMouseMove);
 	}, []);
@@ -600,6 +622,18 @@ export default function Editor({ persistenceState: persistenceStateProp, cookies
 		}
 		return
 	}, [continueSaving.value]);
+
+	// Toggle Problems Panel shortcut (Ctrl+Shift+M / Cmd+Shift+M)
+	useEffect(() => {
+		const handler = (event: KeyboardEvent) => {
+			if (event.key.toLowerCase() === "m" && (event.metaKey || event.ctrlKey) && event.shiftKey) {
+				event.preventDefault();
+				showProblemsPanel.value = !showProblemsPanel.value;
+			}
+		};
+		window.addEventListener("keydown", handler);
+		return () => window.removeEventListener("keydown", handler);
+	}, []);
 
 	let initialCode = "";
 	let gameId = '';
@@ -779,21 +813,31 @@ export default function Editor({ persistenceState: persistenceStateProp, cookies
 							}
 						}}
 					/>
-					{errorLog.value.length > 0 && (
-						<div class={styles.errors}>
-							<button
-								class={styles.errorClose}
-								onClick={() => (errorLog.value = [])}
-							>
-								<IoClose />
-							</button>
+					{showProblemsPanel.value && (
+						<div
+							class={`${styles.problemsResizeBar} ${
+								verticalResizeState.value ? styles.resizing : ""
+							}`}
+							onMouseDown={(event) => {
+								document.documentElement.style.cursor = "ns-resize";
+								verticalResizeState.value = {
+									startMousePos: event.clientY,
+									startValue: problemsPanelHeight.value,
+								};
+								window.addEventListener(
+									"mouseup",
+									() => {
+										verticalResizeState.value = null;
+										document.documentElement.style.cursor = "";
+									},
+									{ once: true }
+								);
+							}}
+						/>
+					)}
 
-							{errorLog.value.map((error, i) => (
-								<div key={`${i}-${error.description}`}>
-									{error.description}
-								</div>
-							))}
-						</div>
+					{showProblemsPanel.value && (
+						<ProblemsPanel persistenceState={persistenceState} />
 					)}
 				</div>
 

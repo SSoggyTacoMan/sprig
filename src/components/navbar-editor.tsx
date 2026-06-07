@@ -10,6 +10,7 @@ import {
 	switchTheme,
 	isNewSaveStrat,
 	screenRef, type GithubState,
+	showProblemsPanel,
 } from "../lib/state";
 import type { RoomState, ThemeType } from "../lib/state";
 import Button from "./design-system/button";
@@ -35,7 +36,7 @@ import {
 import { FaBrush } from "react-icons/fa";
 import { usePopupCloseClick } from "../lib/utils/popup-close-click";
 import { upload, uploadState } from "../lib/upload";
-import { VscLoading } from "react-icons/vsc";
+import { VscLoading, VscError } from "react-icons/vsc";
 import { defaultExampleCode } from "../lib/examples";
 import beautifier from "js-beautify";
 import { onRun } from "./big-interactive-pages/editor";
@@ -1020,6 +1021,17 @@ export default function EditorNavbar(props: EditorNavbarProps) {
 							)}
 						</div>
 					)}
+				</li>
+
+				<li>
+					<Button
+						accent={showProblemsPanel.value}
+						icon={VscError}
+						onClick={() => (showProblemsPanel.value = !showProblemsPanel.value)}
+						title="Toggle Problems Panel"
+					>
+						Problems ({errorLog.value.length + 9})
+					</Button>
 				</li>
 
 				<li>

@@ -1,6 +1,9 @@
 import { type Signal, signal } from '@preact/signals'
 import { IoColorPalette, IoImage, IoMap, IoMusicalNotes } from 'react-icons/io5'
-import type { FromTo } from './codemirror/util'
+export interface FromTo {
+	from: number
+	to: number
+}
 
 import BitmapEditor from '../components/subeditors/bitmap-editor'
 import ColorPickerEditor from '../components/subeditors/color-picker'
@@ -116,6 +119,10 @@ export const monacoEditor = signal<any | null>(null)
 export const monacoEditorText = signal<string>('');
 export const muted = signal<boolean>(false)
 export const errorLog = signal<NormalizedError[]>([])
+export const showProblemsPanel = signal<boolean>(false)
+export const activePanelTab = signal<string>('problems')
+export const problemsPanelHeight = signal<number>(250)
+export const problemsFilterQuery = signal<string>('')
 export const openEditor = signal<OpenEditor | null>(null)
 export const bitmaps = signal<[string, string][]>([])
 export const editSessionLength = signal<Date>(new Date());

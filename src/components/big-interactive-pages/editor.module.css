@@ -378,3 +378,25 @@
 	background: #f3f4f6;
 	border-color: #57606a;
 }
+
+.problemsResizeBar {
+	height: 4px;
+	min-height: 4px;
+	cursor: ns-resize;
+	background: #252526;
+	border-top: 1px solid #1e1e1e;
+	border-bottom: 1px solid #1e1e1e;
+	z-index: 10;
+	transition: background 0.1s;
+}
+
+:global(.theme-light) .problemsResizeBar {
+	background: #cccccc;
+	border-top: 1px solid #e1e1e1;
+	border-bottom: 1px solid #e1e1e1;
+}
+
+.problemsResizeBar:hover,
+.problemsResizeBar.resizing {
+	background: var(--accent);
+}

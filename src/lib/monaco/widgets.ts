@@ -1,9 +1,17 @@
 import type * as monaco from 'monaco-editor';
 import { openEditor, type EditorKind } from '../state';
 
+let isSetup = false;
+
 export function setupMonacoSprig(monacoInst: typeof monaco, editor: monaco.editor.IStandaloneCodeEditor) {
-	// Register the command that the CodeLens will trigger
-	const commandId = editor.addCommand(0, (_, kind: EditorKind, from: number, to: number, text: string) => {
+	if (isSetup) return;
+	isSetup = true;
+
+	const commandId = 'sprig.openSubEditor';
+
+	// Register the command globally so it receives arguments from CodeLens
+	monacoInst.editor.registerCommand(commandId, (_, kind: EditorKind, from: number, to: number, text: string) => {
+		console.log("COMMAND CALLBACK:", { kind, from, to, textLength: text.length });
 		openEditor.value = {
 			kind,
 			editRange: { from, to },
@@ -33,9 +41,14 @@ export function setupMonacoSprig(monacoInst: typeof monaco, editor: monaco.edito
 					),
 					id: match.index.toString(),
 					command: {
-						id: commandId!,
+						id: commandId,
 						title: `🎨 Edit ${kind.charAt(0).toUpperCase() + kind.slice(1)}`,
-						arguments: [kind, match.index, match.index + match[0].length, match[0]]
+						arguments: [
+							kind,
+							match.index + match[1].length + 1,
+							match.index + match[0].length - 1,
+							match[2]
+						]
 					}
 				});
 			}
