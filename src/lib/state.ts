@@ -133,8 +133,8 @@ export const _foldRanges = signal<FromTo[]>([]);
 export const _widgets = signal<any[]>([]);
 export const LAST_SAVED_SESSION_ID = 'lastSavedSessionId';
 
-export type ThemeType = "dark" | "light" | "busker";
-export const theme = signal<ThemeType>("dark");
+export type ThemeType = "dark" | "light" | "busker" | "system";
+export const theme = signal<ThemeType>("system");
 type Theme = {
 	navbarIcon: string,
 	accent: string,
@@ -175,8 +175,31 @@ export const themes: Partial<Record<ThemeType, Theme>> = {
 		accentLight: "#06b0ffb0",
 		fgMutedOnAccent: "#6d83ff",
 		background: "#3E29ED",
+	},
+	"system": {
+		...baseTheme,
+		background: "linear-gradient(135deg, #2f2f2f 50%, #fafed7 50%)",
+		accent: "#8fcabb"
 	}
 };
+
+export const getEffectiveTheme = (themeType: ThemeType): "dark" | "light" | "busker" => {
+	if (themeType === "system") {
+		if (typeof window !== "undefined" && window.matchMedia) {
+			return window.matchMedia('(prefers-color-scheme: dark)').matches ? "dark" : "light";
+		}
+		return "dark";
+	}
+	return themeType as "dark" | "light" | "busker";
+};
+
+if (typeof window !== "undefined" && window.matchMedia) {
+	window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+		if (theme.peek() === "system") {
+			switchTheme("system");
+		}
+	});
+}
 
 export const switchTheme = (themeType: ThemeType) => {
 	theme.value = themeType;
@@ -184,7 +207,8 @@ export const switchTheme = (themeType: ThemeType) => {
 	// store the new theme value in local storage
 	localStorage.setItem("theme", themeType);
 
-	const themeValue = themes[themeType];
+	const effective = getEffectiveTheme(themeType);
+	const themeValue = themes[effective];
 	// set the document values
 	const documentStyle = document.body.style;
 

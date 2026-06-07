@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'preact/hooks'
 import Editor, { useMonaco } from '@monaco-editor/react'
 import type * as monaco from 'monaco-editor'
 import styles from './monaco.module.css'
-import { theme, errorLog, isNewSaveStrat, ConnectionStatus, PersistenceStateKind, monacoEditorText } from '../lib/state'
+import { theme, errorLog, isNewSaveStrat, ConnectionStatus, PersistenceStateKind, monacoEditorText, getEffectiveTheme } from '../lib/state'
 import type { PersistenceState, RoomState, RoomParticipant } from '../lib/state'
 import { type Signal, useSignal, useSignalEffect } from '@preact/signals'
 import type { Awareness } from 'y-protocols/awareness'
@@ -11,6 +11,7 @@ import * as Y from 'yjs'
 import { startSavingGame } from './big-interactive-pages/editor'
 import type { MonacoBinding } from 'y-monaco'
 import { setupMonacoSprig } from '../lib/monaco/widgets'
+import { defineThemes } from '../lib/monaco/themes'
 
 interface MonacoProps {
 	class?: string | undefined
@@ -164,7 +165,8 @@ export default function MonacoComponent(props: MonacoProps) {
 				height="100%" 
 				defaultLanguage="javascript" 
 				defaultValue={props.initialCode} 
-				theme={theme.value === 'dark' ? 'vs-dark' : 'vs'}
+				theme={getEffectiveTheme(theme.value) === 'dark' ? 'sprig-dark' : 'sprig-light'}
+				beforeMount={defineThemes}
 				onMount={handleEditorDidMount}
 				options={{
 					minimap: { enabled: false },
