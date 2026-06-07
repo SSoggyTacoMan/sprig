@@ -1030,7 +1030,7 @@ export default function EditorNavbar(props: EditorNavbarProps) {
 						onClick={() => (showProblemsPanel.value = !showProblemsPanel.value)}
 						title="Toggle Problems Panel"
 					>
-						Problems ({errorLog.value.length + 9})
+						Problems ({errorLog.value.length})
 					</Button>
 				</li>
 

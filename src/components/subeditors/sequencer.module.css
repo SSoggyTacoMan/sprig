@@ -128,3 +128,10 @@
 .instruments .active {
 	box-shadow: 0 0 0 2px inset var(--fg-muted);
 }
+
+.tools {
+	display: flex;
+	flex-direction: row;
+	gap: 6px;
+	margin-left: 20px;
+}

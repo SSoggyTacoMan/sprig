@@ -8,12 +8,21 @@ import { textToTune, tuneToText } from '../../../engine/src/base'
 import { leftDown, rightDown } from '../../lib/utils/events'
 import { useEffect } from 'preact/hooks'
 import Button from '../design-system/button'
+import ToolButton from '../design-system/tool-button'
+import { IoArrowUndo, IoArrowRedo, IoTrash } from 'react-icons/io5'
+
+interface Moment {
+	cells: Cells
+	previous: Moment | null
+	next: Moment | null
+}
 
 interface CellProps {
 	instrument: Signal<InstrumentType>
 	erasing: Signal<boolean>
 	lastDraw: Signal<[number, number] | null>
 	cells: Signal<Cells>
+	setCells: (cells: Cells) => void
 	bpm: Signal<number>
 	x: number
 	y: number
@@ -68,7 +77,7 @@ function Cell(props: CellProps) {
 		const numberInCol = Object.keys(props.cells.value).filter(k => k.startsWith(`${x}_`)).length
 		if (numberInCol >= 5) return
 		if (props.cells.value[key] !== props.instrument.value) {
-			props.cells.value = { ...props.cells.value, [key]: props.instrument.value }
+			props.setCells({ ...props.cells.value, [key]: props.instrument.value })
 			const note = yNoteMap[y]!
 			const duration = 1000 * 60 / props.bpm.value
 			playNote(note, duration, props.instrument.value)
@@ -86,7 +95,7 @@ function Cell(props: CellProps) {
 					if (key in props.cells.value && props.cells.value[key] === props.instrument.value) {
 						const newValue = { ...props.cells.value }
 						delete newValue[key]
-						props.cells.value = newValue
+						props.setCells(newValue)
 						props.erasing.value = true
 					} else {
 						drawAndPlay(props.x, props.y)
@@ -99,7 +108,7 @@ function Cell(props: CellProps) {
 				if (rightDown(event)) {
 					const newValue = { ...props.cells.value }
 					delete newValue[`${props.x}_${props.y}`]
-					props.cells.value = newValue
+					props.setCells(newValue)
 				}
 			}}
 			onMouseOver={(event) => {
@@ -110,7 +119,7 @@ function Cell(props: CellProps) {
 						if (props.erasing.value) {
 							const newValue = { ...props.cells.value }
 							delete newValue[`${x}_${y}`]
-							props.cells.value = newValue
+							props.setCells(newValue)
 						} else {
 							drawAndPlay(x, y)
 						}
@@ -136,32 +145,57 @@ export default function SequencerEditor(props: EditorProps) {
 	const preventContextMenu = (event: MouseEvent) => { event.preventDefault(); }
 	window.addEventListener('contextmenu', preventContextMenu)
 
-	/**
-	 * Clear the sequencer editor.
-	 * This function:
-	 *   - Clears the cells from the sequencer
-	 *   - Sets the lastDraw (used for drawing lines) to null
-	 *   - Clears the text in the editor
-	 */
-	const clearSequencer = () => {
-		cells.value = {}; // Remove all cells from the sequencer
-		lastDraw.value = null; // Reset the draw cursor
-		props.text.value = ""; // Clear the text in the editor
+	const moment = useSignal<Moment>({
+		cells: tuneToCells(textToTune(props.text.value)),
+		previous: null,
+		next: null
+	})
+
+	const setCells = (newCells: Cells) => {
+		cells.value = newCells
+		moment.value = {
+			cells: newCells,
+			previous: moment.value,
+			next: null
+		}
+		props.text.value = '\n' + tuneToText(cellsToTune(newCells, bpm.value)).trim()
 	}
 
-	// Sync text changes with cells
-	useEffect(() => {
+	const undo = () => {
+		if (!moment.value.previous) return
+		moment.value = moment.value.previous
+		cells.value = moment.value.cells
+		props.text.value = '\n' + tuneToText(cellsToTune(moment.value.cells, bpm.value)).trim()
+	}
+
+	const redo = () => {
+		if (!moment.value.next) return
+		moment.value = moment.value.next
+		cells.value = moment.value.cells
+		props.text.value = '\n' + tuneToText(cellsToTune(moment.value.cells, bpm.value)).trim()
+	}
+
+	const clearSequencer = () => {
+		setCells({})
+		lastDraw.value = null
+	}
+
+	// Sync text changes with cells and moment
+	useSignalEffect(() => {
 		const newCells = tuneToCells(textToTune(props.text.value));
 		const count = props.text.value.match(/(.+):/)
 		bpm.value = count ? Math.round(60 * 1000 / Number(count[1])) : 120
-		if (!cellsEq(newCells, cells.peek())) // Perf boost for rapid BPM changes
+		
+		if (!cellsEq(newCells, cells.peek())) {
 			cells.value = newCells
-	
-	}, [ props.text.value ]);
-
-	// Sync cell changes with text
-	useSignalEffect(() => {
-		props.text.value = '\n' + tuneToText(cellsToTune(cells.value, bpm.value)).trim()
+		}
+		if (!cellsEq(newCells, moment.peek().cells)) {
+			moment.value = {
+				cells: newCells,
+				previous: moment.peek(),
+				next: null
+			}
+		}
 	})
 
 	// Playback state
@@ -180,7 +214,7 @@ export default function SequencerEditor(props: EditorProps) {
 				{new Array(beats).fill(0).map((_, x) => (
 					<div key={x} class={`${styles.column} ${beat.value === x ? styles.playhead : ''}`}>
 						{new Array(height).fill(0).map((_, y) => (
-							<Cell key={`${x},${y}`} {...{ x, y, lastDraw, instrument, erasing, cells, bpm }} />
+							<Cell key={`${x},${y}`} {...{ x, y, lastDraw, instrument, erasing, cells, setCells, bpm }} />
 						))}
 					</div>
 				))}
@@ -211,15 +245,36 @@ export default function SequencerEditor(props: EditorProps) {
 							beat.value = 0
 						}}
 					/>
-					<Button
-						onClick={() => {
-							const isConfirmed = confirm('Are you sure you want to clear the sequencer?');
-							if (isConfirmed) {
-								clearSequencer();
-							}
-						}}
-					> {'Clear'}
-					</Button>
+					<div class={styles.tools}>
+						<ToolButton
+							key='undo'
+							name='Undo'
+							shortcut='$mod+Z'
+							icon={IoArrowUndo}
+							onActivate={undo}
+							disabled={!moment.value.previous}
+							tooltipSide='top'
+						/>
+						<ToolButton
+							key='redo'
+							name='Redo'
+							shortcut='$mod+Shift+Z'
+							icon={IoArrowRedo}
+							onActivate={redo}
+							disabled={!moment.value.next}
+							tooltipSide='top'
+						/>
+						<ToolButton
+							key='clear'
+							name='Clear'
+							icon={IoTrash}
+							onActivate={() => {
+								const isConfirmed = confirm('Are you sure you want to clear the sequencer?');
+								if (isConfirmed) clearSequencer();
+							}}
+							tooltipSide='top'
+						/>
+					</div>
 				</div>
 
 				<div class={styles.bpm}>

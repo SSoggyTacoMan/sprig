@@ -45,13 +45,16 @@ import { PersistenceStateKind } from "../../lib/state";
 
 let screenShakeSignal: Signal<number> | null = null;
 
-const performSyntaxCheck = () => {
+const performSyntaxCheck = (forceOpen = false) => {
 	const code = monacoEditor.value?.getValue() ?? "";
 	const res = _performSyntaxCheck(code);
 	if (res.error) {
 		errorLog.value = [];
 		errorLog.value = [res.error];
-		showProblemsPanel.value = true;
+		if (forceOpen) showProblemsPanel.value = true;
+	} else {
+		// clear old syntax errors when code is clean
+		if (errorLog.value.length > 0) errorLog.value = [];
 	}
 }
 
@@ -61,6 +64,10 @@ export const onRun = async () => {
 
 	if (cleanupRef.value) cleanupRef.value();
 	errorLog.value = [];
+	// syntax check first — force open panel if there's an error
+	performSyntaxCheck(true);
+	if (errorLog.value.length > 0) return; // don't run if syntax error
+
 	const code = monacoEditor.value?.getValue() ?? "";
 	const res = runGame(code, screenRef.value, (error) => {
 		errorLog.value = [...errorLog.value, error];
@@ -381,7 +388,7 @@ export default function Editor({ persistenceState: persistenceStateProp, cookies
 
 	useEffect(() => {
 		setInterval(() => {
-			performSyntaxCheck();
+			performSyntaxCheck(false); // background check, don't re-open if user closed
 		}, 2000);
 	}, []);
 

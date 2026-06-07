@@ -1,29 +1,39 @@
 import styles from './map-editor.module.css'
 import { bitmaps, type EditorProps } from '../../lib/state'
 import BitmapPreview from '../design-system/bitmap-preview'
-import { type Signal, useSignal } from '@preact/signals'
+import { type Signal, useSignal, useSignalEffect } from '@preact/signals'
 import { useEffect, useRef } from 'preact/hooks'
 import { transparentBgUrl } from '../../lib/utils/transparent-bg'
 import { leftDown, rightDown } from '../../lib/utils/events'
+import ToolButton from '../design-system/tool-button'
+import { IoArrowUndo, IoArrowRedo, IoTrash } from 'react-icons/io5'
 
 const textToGrid = (text: string): string[][] => text.trim().split('\n').map(line => [ ...line.trim() ])
 const gridToText = (grid: string[][]): string => '\n' + grid.map(row => row.join('')).join('\n')
 
+interface Moment {
+	grid: string[][]
+	previous: Moment | null
+	next: Moment | null
+}
+
 interface ResizeControlsProps {
-	text: Signal<string>
+	grid: string[][]
+	setGrid: (grid: string[][]) => void
 	dw: -1 | 0 | 1
 	dh: -1 | 0 | 1
 }
 
 function ResizeControls(props: ResizeControlsProps) {
-	const grid = textToGrid(props.text.value)
+	const grid = props.grid
     return (
 		<div class={styles.resizeControls}>
 			<button
 				onClick={() => {
-					if (props.dw) grid.forEach(row => row[props.dw > 0 ? 'push' : 'unshift']('.')) // Add a column
-					if (props.dh) grid[props.dh > 0 ? 'push' : 'unshift'](new Array(grid[0]!.length).fill('.')) // Add a row
-					props.text.value = gridToText(grid)
+					const newGrid = grid.map(row => [...row])
+					if (props.dw) newGrid.forEach(row => row[props.dw > 0 ? 'push' : 'unshift']('.')) // Add a column
+					if (props.dh) newGrid[props.dh > 0 ? 'push' : 'unshift'](new Array(newGrid[0]!.length).fill('.')) // Add a row
+					props.setGrid(newGrid)
 				}}
 			>
 				+
@@ -31,9 +41,10 @@ function ResizeControls(props: ResizeControlsProps) {
 
 			<button
 				onClick={() => {
-					if (props.dw) grid.forEach(row => row.splice(props.dw > 0 ? row.length - 1 : 0, 1)) // Remove a column
-					if (props.dh) grid.splice(props.dh > 0 ? grid.length - 1 : 0, 1) // Remove a row
-					props.text.value = gridToText(grid)
+					const newGrid = grid.map(row => [...row])
+					if (props.dw) newGrid.forEach(row => row.splice(props.dw > 0 ? row.length - 1 : 0, 1)) // Remove a column
+					if (props.dh) newGrid.splice(props.dh > 0 ? newGrid.length - 1 : 0, 1) // Remove a row
+					props.setGrid(newGrid)
 				}}
 				disabled={!!(props.dw && grid[0]!.length <= 1) || !!(props.dh && grid.length <= 1)}
 			>
@@ -68,10 +79,54 @@ export default function MapEditor(props: EditorProps) {
 		return () => window.removeEventListener('mouseup', mouseup)
 	})
 
-	const grid = textToGrid(props.text.value)
-	const placeSprite = (x: number, y: number) => {
-		grid[y]![x] = erasing.value ? '.' : active.value
+	const moment = useSignal<Moment>({
+		grid: textToGrid(props.text.value),
+		previous: null,
+		next: null
+	})
+
+	useSignalEffect(() => {
+		const newGrid = textToGrid(props.text.value)
+		if (JSON.stringify(newGrid) !== JSON.stringify(moment.peek().grid)) {
+			moment.value = {
+				grid: newGrid,
+				previous: moment.peek(),
+				next: null
+			}
+		}
+	})
+
+	const setGrid = (grid: string[][]) => {
+		moment.value = {
+			grid,
+			previous: moment.value,
+			next: null
+		}
 		props.text.value = gridToText(grid)
+	}
+
+	const undo = () => {
+		if (!moment.value.previous) return
+		moment.value = moment.value.previous
+		props.text.value = gridToText(moment.value.grid)
+	}
+
+	const redo = () => {
+		if (!moment.value.next) return
+		moment.value = moment.value.next
+		props.text.value = gridToText(moment.value.grid)
+	}
+
+	const clear = () => {
+		const newGrid = moment.value.grid.map(row => row.map(() => '.'))
+		setGrid(newGrid)
+	}
+
+	const grid = moment.value.grid
+	const placeSprite = (x: number, y: number) => {
+		const newGrid = grid.map(row => [...row])
+		newGrid[y]![x] = erasing.value ? '.' : active.value
+		setGrid(newGrid)
 	}
 
 	return (
@@ -99,13 +154,42 @@ export default function MapEditor(props: EditorProps) {
 					<p>Dimensions: {grid[0]?.length ?? 0}&times;{grid.length}</p>
 					<p>Drag right click to erase.</p>
 				</div>
+				<div class={styles.configTools}>
+					<div class={styles.toolGrid}>
+						<ToolButton
+							key='undo'
+							name='Undo'
+							shortcut='$mod+Z'
+							icon={IoArrowUndo}
+							onActivate={undo}
+							disabled={!moment.value.previous}
+							tooltipSide='top'
+						/>
+						<ToolButton
+							key='redo'
+							name='Redo'
+							shortcut='$mod+Shift+Z'
+							icon={IoArrowRedo}
+							onActivate={redo}
+							disabled={!moment.value.next}
+							tooltipSide='top'
+						/>
+						<ToolButton
+							key='clear'
+							name='Clear'
+							icon={IoTrash}
+							onActivate={clear}
+							tooltipSide='top'
+						/>
+					</div>
+				</div>
 			</div>
 
 			<div class={styles.resizeX}>
-				<ResizeControls text={props.text} dw={-1} dh={0} />
+				<ResizeControls grid={grid} setGrid={setGrid} dw={-1} dh={0} />
 				
 				<div class={styles.resizeY}>
-					<ResizeControls text={props.text} dw={0} dh={-1} />
+					<ResizeControls grid={grid} setGrid={setGrid} dw={0} dh={-1} />
 
 					<div
 						ref={gridContainer}
@@ -157,10 +241,10 @@ export default function MapEditor(props: EditorProps) {
 						</div>
 					</div>
 
-					<ResizeControls text={props.text} dw={0} dh={1} />
+					<ResizeControls grid={grid} setGrid={setGrid} dw={0} dh={1} />
 				</div>
 
-				<ResizeControls text={props.text} dw={1} dh={0} />
+				<ResizeControls grid={grid} setGrid={setGrid} dw={1} dh={0} />
 			</div>
 		</div>
 	)

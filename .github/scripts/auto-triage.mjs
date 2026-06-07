@@ -404,17 +404,41 @@ async function applyLabels(result) {
 		event.action === "synchronize") &&
 		(hasLabel(currentLabels, "Claimed") || hasLabel(currentLabels, "Ready for Maintainer"));
 
+	const failureCategories = new Set();
+	if (!result.ok) {
+		for (const check of result.checks) {
+			if (!check.ok) {
+				if (check.name.startsWith("Metadata")) failureCategories.add("Failed: Metadata");
+				else if (check.name.startsWith("PR ")) failureCategories.add("Failed: PR Description");
+				else if (check.name === "Exactly one game file" || check.name === "Only new or game files changed" || check.name === "Files stay in allowed folders") failureCategories.add("Failed: Files");
+				else failureCategories.add("Failed: Code");
+			}
+		}
+	}
+
+	const allFailureLabels = ["Failed", "Failed: Metadata", "Failed: PR Description", "Failed: Files", "Failed: Code"];
+
 	if (result.ok) {
 		await addLabels({ owner, repo, token, issueNumber: prNumber, labels: ["Verified"] });
 		if (!preserveReviewState) {
 			await setStateLabel({ owner, repo, token, issueNumber: prNumber, state: "Ready for Playtest" });
 		}
-		await removeLabel({ owner, repo, token, issueNumber: prNumber, label: "Failed" });
+		for (const label of allFailureLabels) {
+			await removeLabel({ owner, repo, token, issueNumber: prNumber, label });
+		}
 		if (!preserveReviewState) {
 			await removeLabel({ owner, repo, token, issueNumber: prNumber, label: "Needs Author" });
 		}
 	} else {
-		await addLabels({ owner, repo, token, issueNumber: prNumber, labels: ["Failed"] });
+		const labelsToAdd = ["Failed", ...Array.from(failureCategories)];
+		await addLabels({ owner, repo, token, issueNumber: prNumber, labels: labelsToAdd });
+		
+		for (const label of allFailureLabels) {
+			if (!labelsToAdd.includes(label)) {
+				await removeLabel({ owner, repo, token, issueNumber: prNumber, label });
+			}
+		}
+
 		await setStateLabel({ owner, repo, token, issueNumber: prNumber, state: "Needs Author" });
 		await removeLabel({ owner, repo, token, issueNumber: prNumber, label: "Verified" });
 		await removeLabel({ owner, repo, token, issueNumber: prNumber, label: "Ready for Playtest" });

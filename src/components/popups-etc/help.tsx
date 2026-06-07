@@ -17,7 +17,14 @@ interface HelpProps {
 	helpAreaSize: Signal<number>;
 	showingTutorialWarning?: Signal<boolean>;
 }
-const helpHtml = compiledContent();
+// compiledContent() may return a Promise in Astro v6 client context
+const _rawContent = compiledContent();
+const helpHtmlSignal = signal<string>('');
+if (_rawContent instanceof Promise) {
+	_rawContent.then((html: string) => { helpHtmlSignal.value = html; });
+} else {
+	helpHtmlSignal.value = _rawContent as string;
+}
 
 export const logInfo = signal<Array<{
 	args: any[];
@@ -290,7 +297,7 @@ export default function Help(props: HelpProps) {
 						display: !showingTutorial.value ? "block" : "none",
 					}}
 					ref={toolkitContentRef}
-					dangerouslySetInnerHTML={{ __html: helpHtml }}
+					dangerouslySetInnerHTML={{ __html: helpHtmlSignal.value }}
 					onScroll={(e) => {
 						toolkitScroll.value = e.currentTarget.scrollTop;
 					}}
