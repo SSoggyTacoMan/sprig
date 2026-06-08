@@ -45,15 +45,16 @@ if (event.comment && event.action === "created") {
 	const commentBody = (event.comment.body ?? "").trim();
 	const commenterLogin = event.comment.user?.login;
 
-	// /check-ai command — only for authorized collaborators
+	// /check-ai command — only for authorized reviewers (maintainers + triagers from review-roles.json)
 	if (commentBody === "/check-ai") {
 		let isAuthorized = false;
 		try {
-			const permData = await githubRequest(token, "GET", `/repos/${owner}/${repo}/collaborators/${commenterLogin}/permission`);
-			const perm = permData.permission;
-			isAuthorized = perm === "admin" || perm === "maintain" || perm === "write";
+			const rolesPath = path.resolve(new URL(".", import.meta.url).pathname, "../review-roles.json");
+			const roles = JSON.parse(readFileSync(rolesPath, "utf-8"));
+			const authorized = [...(roles.maintainers ?? []), ...(roles.triagers ?? [])];
+			isAuthorized = authorized.includes(commenterLogin);
 		} catch (e) {
-			console.log(`Permission check failed for ${commenterLogin}:`, e.message);
+			console.log("Failed to load review-roles.json:", e.message);
 		}
 
 		if (!isAuthorized) {
