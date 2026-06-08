@@ -427,7 +427,7 @@ Note: The above points are entirely optional guidelines. You do not need to chec
 Think critically and identify any other subtle traits. Reply with ONLY a JSON object: {"ai_probability": 85, "reason": "Brief summary of evidence"}.
 
 Code:
-${code.substring(0, 5000)}`;
+${code.substring(0, 50000)}`;
 
 	const models = [
 		"~openai/gpt-latest",
@@ -563,9 +563,9 @@ async function applyLabels(result) {
 	}
 
 	if (result.vibecoding && result.vibecoding.ai_probability >= 80) {
-		await addLabels({ owner, repo, token, issueNumber: prNumber, labels: ["Vibecoded"] });
+		await addLabels({ owner, repo, token, issueNumber: prNumber, labels: ["AI Suspection"] });
 	} else {
-		await removeLabel({ owner, repo, token, issueNumber: prNumber, label: "Vibecoded" });
+		await removeLabel({ owner, repo, token, issueNumber: prNumber, label: "AI Suspection" });
 	}
 }
 
@@ -674,7 +674,7 @@ ${result.ok ? "This submission is ready for human playtest." : "This submission 
 - Similarity: ${formatPercent(result.similarity.score)}${result.similarity.match ? ` against \`${result.similarity.match}\`` : ""}
 
 ${result.vibecoding ? `<details>
-<summary><b>Vibecoding Analysis (AI Probability: ${result.vibecoding.ai_probability}%)</b></summary>
+<summary><b>AI Suspection (AI Probability: ${result.vibecoding.ai_probability}%)</b></summary>
 
 **Consensus:** ${result.vibecoding.reason}
 </details>
@@ -736,17 +736,7 @@ function validateSubmissionFiles(pullFiles, addCheck) {
 			: `Only one game file is allowed per submission. Found ${jsNames}.`
 	);
 
-	// EC9 fix: allow authors to modify their own game files (e.g. fixing requested changes)
-	// only flag if they are modifying files OUTSIDE the games/ folder
-	const changedNonAdded = pullFiles.filter((file) => file.status !== "added" && !file.filename.startsWith("games/"));
-	const changedNames = changedNonAdded.map((file) => `\`${file.filename}\``).join(", ");
-	addCheck(
-		"Only new or game files changed",
-		changedNonAdded.length === 0,
-		changedNonAdded.length
-			? `Submissions should only add new game files or modify existing ones in \`games/\`. These files outside \`games/\` were modified: ${changedNames}.`
-			: "All submitted files are new or inside \`games/\`."
-	);
+	// Redundant EC9 check removed as it's fully covered by 'Files stay in allowed folders'.
 	return { jsFiles, imageFiles };
 }
 
