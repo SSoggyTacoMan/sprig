@@ -238,7 +238,6 @@ w......p......w
 wwwwwwwwwwwwwww`;
 
 // Put them all in a list
-// Put them all in a list
 const levels = [
   level0, level1, level2, level3, level4, level5,
   level6, level7, level8, level9, level10,
@@ -268,6 +267,7 @@ let dy = 0;
 // 3. MOVEMENT LOGIC
 function tryMove(newDx, newDy) {
   let p = getFirst(player);
+  if (!p) return;
   // Always update the facing direction first
   dx = newDx;
   dy = newDy;
@@ -290,6 +290,7 @@ onInput("d", () => tryMove(1, 0));
 // 4. ATTRACT ABILITY (Press J)
 onInput("j", () => {
   let p = getFirst(player);
+  if (!p) return;
   let scanX = p.x + dx;
   let scanY = p.y + dy;
   let targetBox = null;
@@ -328,6 +329,7 @@ onInput("j", () => {
 // 5. REPEL ABILITY (Press K)
 onInput("k", () => {
   let p = getFirst(player);
+  if (!p) return;
   let scanX = p.x + dx;
   let scanY = p.y + dy;
   let targetBox = null;

@@ -433,8 +433,10 @@ ${code.substring(0, 5000)}`;
 	];
 
 	try {
-		const requests = models.map(model => 
-			fetch("https://ai.hackclub.com/proxy/v1/chat/completions", {
+		const requests = models.map(model => {
+			const controller = new AbortController();
+			const timeoutId = setTimeout(() => controller.abort(), 15000);
+			return fetch("https://ai.hackclub.com/proxy/v1/chat/completions", {
 				method: "POST",
 				headers: {
 					"Authorization": `Bearer ${apiKey}`,
@@ -444,15 +446,22 @@ ${code.substring(0, 5000)}`;
 					model,
 					messages: [{ role: "user", content: prompt }],
 					response_format: { type: "json_object" }
-				})
+				}),
+				signal: controller.signal
 			})
 			.then(res => res.json())
-			.then(data => JSON.parse(data.choices[0].message.content))
+			.then(data => {
+				const content = data.choices[0].message.content.trim();
+				const bt = String.fromCharCode(96);
+				const jsonString = content.startsWith(bt + bt + bt) ? content.replace(new RegExp("^" + bt + "{3}(json)?\\s*|" + bt + "{3}$", "g"), "").trim() : content;
+				return JSON.parse(jsonString);
+			})
 			.catch(e => {
 				console.error(`Model ${model} failed:`, e);
 				return null;
 			})
-		);
+			.finally(() => clearTimeout(timeoutId));
+		});
 
 		const results = await Promise.all(requests);
 		const validResults = results.filter(r => r && typeof r.ai_probability === 'number');
@@ -468,6 +477,8 @@ ${code.substring(0, 5000)}`;
 		if (rawReasons.length > 0) {
 			const summaryPrompt = `Summarize these AI forensic code review notes into a single concise paragraph. Focus on the main consensus regarding whether the code is AI-generated slop or a genuine human effort.\n\nReviews:\n${rawReasons}`;
 			try {
+				const controller = new AbortController();
+				const timeoutId = setTimeout(() => controller.abort(), 15000);
 				const summaryReq = await fetch("https://ai.hackclub.com/proxy/v1/chat/completions", {
 					method: "POST",
 					headers: {
@@ -477,9 +488,11 @@ ${code.substring(0, 5000)}`;
 					body: JSON.stringify({
 						model: "~openai/gpt-mini-latest",
 						messages: [{ role: "user", content: summaryPrompt }]
-					})
+					}),
+					signal: controller.signal
 				});
 				const summaryData = await summaryReq.json();
+				clearTimeout(timeoutId);
 				if (summaryData.choices?.[0]?.message?.content) {
 					finalReason = summaryData.choices[0].message.content.trim();
 				}
