@@ -427,7 +427,7 @@ Note: The above points are entirely optional guidelines. You do not need to chec
 Think critically and identify any other subtle traits. Reply with ONLY a JSON object: {"ai_probability": 85, "reason": "Brief summary of evidence"}.
 
 Code:
-${code.substring(0, 50000)}`;
+${code.substring(0, 250000)}`;
 
 	const models = [
 		"~openai/gpt-latest",
@@ -563,9 +563,9 @@ async function applyLabels(result) {
 	}
 
 	if (result.vibecoding && result.vibecoding.ai_probability >= 80) {
-		await addLabels({ owner, repo, token, issueNumber: prNumber, labels: ["AI Suspection"] });
+		await addLabels({ owner, repo, token, issueNumber: prNumber, labels: ["AI Suspicion"] });
 	} else {
-		await removeLabel({ owner, repo, token, issueNumber: prNumber, label: "AI Suspection" });
+		await removeLabel({ owner, repo, token, issueNumber: prNumber, label: "AI Suspicion" });
 	}
 }
 
@@ -674,7 +674,7 @@ ${result.ok ? "This submission is ready for human playtest." : "This submission 
 - Similarity: ${formatPercent(result.similarity.score)}${result.similarity.match ? ` against \`${result.similarity.match}\`` : ""}
 
 ${result.vibecoding ? `<details>
-<summary><b>AI Suspection (AI Probability: ${result.vibecoding.ai_probability}%)</b></summary>
+<summary><b>AI Suspicion (AI Probability: ${result.vibecoding.ai_probability}%)</b></summary>
 
 **Consensus:** ${result.vibecoding.reason}
 </details>
