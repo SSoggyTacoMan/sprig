@@ -43,3 +43,4 @@ jobs:
                   GITHUB_EVENT_PATH: ${{ github.event_path }}
                   SUBMISSION_PATH: ${{ github.workspace }}/submission
                   SPRIG_REVIEW_BASE_URL: https://sprig.hackclub.com/editor
+                  OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
