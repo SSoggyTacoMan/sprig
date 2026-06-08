@@ -472,8 +472,12 @@ ${code.substring(0, 250000)}`;
 					throw new Error(`Unexpected API response: ${JSON.stringify(data).substring(0, 100)}...`);
 				}
 				const content = data.choices[0].message.content.trim();
-				const bt = String.fromCharCode(96);
-				const jsonString = content.startsWith(bt + bt + bt) ? content.replace(new RegExp("^" + bt + "{3}(json)?\\s*|" + bt + "{3}$", "g"), "").trim() : content;
+				const firstBrace = content.indexOf('{');
+				const lastBrace = content.lastIndexOf('}');
+				if (firstBrace === -1 || lastBrace === -1) {
+					throw new Error("No JSON object found in response");
+				}
+				const jsonString = content.substring(firstBrace, lastBrace + 1);
 				return JSON.parse(jsonString);
 			})
 			.catch(e => {
@@ -499,22 +503,28 @@ ${code.substring(0, 250000)}`;
 			try {
 				const controller = new AbortController();
 				const timeoutId = setTimeout(() => controller.abort(), 15000);
-				const summaryReq = await fetch("https://ai.hackclub.com/proxy/v1/chat/completions", {
-					method: "POST",
-					headers: {
-						"Authorization": `Bearer ${apiKey}`,
-						"Content-Type": "application/json"
-					},
-					body: JSON.stringify({
-						model: "~openai/gpt-mini-latest",
-						messages: [{ role: "user", content: summaryPrompt }]
-					}),
-					signal: controller.signal
-				});
-				const summaryData = await summaryReq.json();
-				clearTimeout(timeoutId);
-				if (summaryData.choices?.[0]?.message?.content) {
-					finalReason = summaryData.choices[0].message.content.trim();
+				try {
+					const summaryReq = await fetch("https://ai.hackclub.com/proxy/v1/chat/completions", {
+						method: "POST",
+						headers: {
+							"Authorization": `Bearer ${apiKey}`,
+							"Content-Type": "application/json"
+						},
+						body: JSON.stringify({
+							model: "~openai/gpt-mini-latest",
+							messages: [{ role: "user", content: summaryPrompt }]
+						}),
+						signal: controller.signal
+					});
+					if (!summaryReq.ok) {
+						throw new Error(`HTTP ${summaryReq.status}: ${await summaryReq.text()}`);
+					}
+					const summaryData = await summaryReq.json();
+					if (summaryData.choices?.[0]?.message?.content) {
+						finalReason = summaryData.choices[0].message.content.trim();
+					}
+				} finally {
+					clearTimeout(timeoutId);
 				}
 			} catch (e) {
 				console.error("Summary failed, using raw reasons", e);
