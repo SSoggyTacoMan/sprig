@@ -72,108 +72,145 @@ jobs:
               return; 
             }
 
-            const { data: pullFiles } = await github.rest.pulls.listFiles({
-              owner: context.repo.owner, repo: context.repo.repo, pull_number: prNumber,
-            });
-
-            let logs = [];
-            let isFailed = false;
-
-            for (const file of pullFiles) {
-              const filename = path.basename(file.filename);
-              
-              if (!file.filename.startsWith('games/')) {
-                logs.push(`- It looks like "${file.filename}" is outside the games folder. Only files in /games are allowed.`);
-                isFailed = true; continue;
-              }
-              if (file.status !== 'added') {
-                logs.push(`- Heads up: "${filename}" was modified, but you can only add new games here.`);
-                isFailed = true; continue;
-              }
-
-              if (filename.endsWith('.js')) {
-                const content = fs.readFileSync(file.filename, 'utf8');
-
-                if (!/^[a-zA-Z0-9-_]+\.js$/.test(filename)) {
-                  logs.push(`- The filename "${filename}" should only use letters, numbers, and dashes.`);
-                  isFailed = true;
-                }
-
-                // --- UPDATED METADATA LOGIC (Order Independent) ---
-                const tags = ['@title:', '@author:', '@description:', '@tags:', '@addedOn:'];
-                const missing = tags.filter(t => !content.includes(t));
-                
-                if (missing.length > 0) {
-                  logs.push(`- The metadata header in "${filename}" is missing or formatted incorrectly (missing ${missing.join(' ')}).`);
-                  isFailed = true;
-                } else {
-                  // Extract values for specific checks
-                  const getVal = (tag) => {
-                    const r = new RegExp(`${tag}\\s*([\\s\\S]*?)(?=@\\w+:|\\*\\/)`);
-                    const m = content.match(r);
-                    return m ? m[1].trim() : "";
-                  };
-
-                  const title = getVal('@title:');
-                  const author = getVal('@author:');
-                  const addedOn = getVal('@addedOn:');
-
-                  if (title.includes("getting_started") || author.includes("leo, edits")) {
-                    logs.push(`- It looks like "${filename}" still has some example/template values in the metadata.`);
-                    isFailed = true;
-                  }
-
-                  const subD = new Date(addedOn);
-                  const diff = Math.abs(new Date() - subD) / (1000 * 60 * 60 * 24 * 30.44);
-                  if (isNaN(subD.getTime()) || diff > 6) {
-                    logs.push(`- The date in "${filename}" doesn't look right. Please set it to the current date.`);
-                    isFailed = true;
-                  }
-                }
-
-                if ([/document\./i, /window\./i, /alert\(/i, /fetch\(/i].some(r => r.test(content))) {
-                  logs.push(`- Found some non-Sprig APIs (like window or fetch) in "${filename}". Please remove them.`);
-                  isFailed = true;
-                }
-
-                const gamesList = fs.readdirSync('games').filter(f => f.endsWith('.js'));
-                for (const existing of gamesList) {
-                  if (file.filename === `games/${existing}`) continue;
-                  const score = checkSimilarity(content, fs.readFileSync(path.join('games', existing), 'utf8'));
-                  if (score > 0.49) {
-                    const rawUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/raw/main/games/${existing}`;
-                    logs.push(`- This code looks very similar to [${existing}](${rawUrl}). Is this a remix or a duplicate?`);
-                    break;
-                  }
-                }
-              }
-            }
-
-            // --- DEFENSIVE REPORTING ---
-            const statusIcon = isFailed ? "❌" : "✅";
-            const statusTitle = isFailed ? "Submission Issues Found" : "Submission Verified";
-            
-            let body = `### ${statusIcon} [Auto Triage] ${statusTitle}\n\`\`\`text\n`;
-            body += logs.length ? logs.join('\n') : "Everything looks great! Your submission is ready be reviewed.";
-            body += "\n```\n";
-            
-            body += "#### [TOOLS]\n";
-            const headSha = context.payload.pull_request?.head?.sha || context.sha;
-            pullFiles.filter(f => f.filename.endsWith('.js')).forEach(f => {
-              const raw = `https://github.com/${context.repo.owner}/${context.repo.repo}/raw/${headSha}/${f.filename}`;
-              body += `- [VIEW_RAW](${raw}) : ${path.basename(f.filename)}\n`;
-            });
-
             try {
-              await github.rest.issues.createComment({
-                issue_number: prNumber, 
-                owner: context.repo.owner, 
-                repo: context.repo.repo, 
-                body
+              const { data: pullFiles } = await github.rest.pulls.listFiles({
+                owner: context.repo.owner, repo: context.repo.repo, pull_number: prNumber,
               });
-            } catch (e) {
-              console.log("[Auto Triage] Commenting failed. Logs:");
-              console.log(body);
-            }
 
-            if (isFailed) process.exit(1);
+              let logs = [];
+              let isFailed = false;
+
+              // --- FIRST PASS: Check for files outside games/ ---
+              const invalidFiles = pullFiles.filter(f => !f.filename.startsWith('games/'));
+              if (invalidFiles.length > 0) {
+                logs.push(`**Files stay in allowed folders:** Only game files in \`games/\` and optional images in \`games/img/\` are allowed. Filenames cannot contain spaces. Images must be .png. Found ${invalidFiles.map(f => `\`${f.filename}\``).join(', ')}.`);
+                logs.push(`**Only new or game files changed:** Submissions should only add new game files or modify existing ones in \`games/\`. These files outside \`games/\` were modified: ${invalidFiles.map(f => `\`${f.filename}\``).join(', ')}.`);
+                isFailed = true;
+              }
+
+              // --- SECOND PASS: Validate game files (only process valid games/ files) ---
+              const gameFiles = pullFiles.filter(f => f.filename.startsWith('games/'));
+              
+              for (const file of gameFiles) {
+                const filename = path.basename(file.filename);
+                
+                if (file.status !== 'added') {
+                  logs.push(`- Heads up: "${filename}" was modified, but you can only add new games here.`);
+                  isFailed = true; 
+                  continue;
+                }
+
+                if (filename.endsWith('.js')) {
+                  try {
+                    const content = fs.readFileSync(file.filename, 'utf8');
+
+                    if (!/^[a-zA-Z0-9-_]+\.js$/.test(filename)) {
+                      logs.push(`- The filename "${filename}" should only use letters, numbers, and dashes.`);
+                      isFailed = true;
+                    }
+
+                    // --- UPDATED METADATA LOGIC (Order Independent) ---
+                    const tags = ['@title:', '@author:', '@description:', '@tags:', '@addedOn:'];
+                    const missing = tags.filter(t => !content.includes(t));
+                    
+                    if (missing.length > 0) {
+                      logs.push(`- The metadata header in "${filename}" is missing or formatted incorrectly (missing ${missing.join(' ')}).`);
+                      isFailed = true;
+                    } else {
+                      // Extract values for specific checks
+                      const getVal = (tag) => {
+                        const r = new RegExp(`${tag}\\s*([\\s\\S]*?)(?=@\\w+:|\\*\\/)`);
+                        const m = content.match(r);
+                        return m ? m[1].trim() : "";
+                      };
+
+                      const title = getVal('@title:');
+                      const author = getVal('@author:');
+                      const addedOn = getVal('@addedOn:');
+
+                      if (title.includes("getting_started") || author.includes("leo, edits")) {
+                        logs.push(`- It looks like "${filename}" still has some example/template values in the metadata.`);
+                        isFailed = true;
+                      }
+
+                      const subD = new Date(addedOn);
+                      const diff = Math.abs(new Date() - subD) / (1000 * 60 * 60 * 24 * 30.44);
+                      if (isNaN(subD.getTime()) || diff > 6) {
+                        logs.push(`- The date in "${filename}" doesn't look right. Please set it to the current date.`);
+                        isFailed = true;
+                      }
+                    }
+
+                    if ([/document\./i, /window\./i, /alert\(/i, /fetch\(/i].some(r => r.test(content))) {
+                      logs.push(`- Found some non-Sprig APIs (like window or fetch) in "${filename}". Please remove them.`);
+                      isFailed = true;
+                    }
+
+                    try {
+                      const gamesList = fs.readdirSync('games').filter(f => f.endsWith('.js'));
+                      for (const existing of gamesList) {
+                        if (file.filename === `games/${existing}`) continue;
+                        const score = checkSimilarity(content, fs.readFileSync(path.join('games', existing), 'utf8'));
+                        if (score > 0.49) {
+                          const rawUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/raw/main/games/${existing}`;
+                          logs.push(`- This code looks very similar to [${existing}](${rawUrl}). Is this a remix or a duplicate?`);
+                          break;
+                        }
+                      }
+                    } catch (e) {
+                      console.log(`[Auto Triage] Warning: Could not compare similarity for ${filename}: ${e.message}`);
+                    }
+                  } catch (e) {
+                    logs.push(`- Error reading "${filename}": ${e.message}`);
+                    isFailed = true;
+                  }
+                }
+              }
+
+              // --- DEFENSIVE REPORTING ---
+              const statusIcon = isFailed ? "❌" : "✅";
+              const statusTitle = isFailed ? "Submission Issues Found" : "Submission Verified";
+              
+              let body = `### ${statusIcon} [Auto Triage] ${statusTitle}\n\`\`\`text\n`;
+              body += logs.length ? logs.join('\n') : "Everything looks great! Your submission is ready be reviewed.";
+              body += "\n```\n";
+              
+              body += "#### [TOOLS]\n";
+              const headSha = context.payload.pull_request?.head?.sha || context.sha;
+              gameFiles.filter(f => f.filename.endsWith('.js')).forEach(f => {
+                const raw = `https://github.com/${context.repo.owner}/${context.repo.repo}/raw/${headSha}/${f.filename}`;
+                body += `- [VIEW_RAW](${raw}) : ${path.basename(f.filename)}\n`;
+              });
+
+              try {
+                await github.rest.issues.createComment({
+                  issue_number: prNumber, 
+                  owner: context.repo.owner, 
+                  repo: context.repo.repo, 
+                  body
+                });
+              } catch (e) {
+                console.log("[Auto Triage] Commenting failed. Logs:");
+                console.log(body);
+              }
+
+              if (isFailed) process.exit(1);
+              
+            } catch (e) {
+              console.log(`[Auto Triage] Validation error: ${e.message}`);
+              console.log(e.stack);
+              
+              // Report the error gracefully instead of crashing
+              try {
+                await github.rest.issues.createComment({
+                  issue_number: prNumber,
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  body: `### ❌ [Auto Triage] Validation Error\n\`\`\`\n${e.message}\n\`\`\`\n\nPlease contact the repository maintainers.`
+                });
+              } catch (commentError) {
+                console.log(`[Auto Triage] Failed to post error comment: ${commentError.message}`);
+              }
+              
+              process.exit(1);
+            }
