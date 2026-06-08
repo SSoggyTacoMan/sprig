@@ -8,9 +8,23 @@ import { lazy } from '../../lib/utils/lazy'
 // - Cells: grid constrained version of a tune that the sequencer supports
 
 export const beats = 32
-export const height = 14
+export const height = 28
 
 export const yNoteMap: Record<number, string> = {
+	27: 'C2',
+	26: 'D2',
+	25: 'E2',
+	24: 'F2',
+	23: 'G2',
+	22: 'A2',
+	21: 'B2',
+	20: 'C3',
+	19: 'D3',
+	18: 'E3',
+	17: 'F3',
+	16: 'G3',
+	15: 'A3',
+	14: 'B3',
 	13: 'C4',
 	12: 'D4',
 	11: 'E4',

@@ -1,6 +1,6 @@
 import styles from './sequencer.module.css'
 import type { EditorProps } from '../../lib/state'
-import { type Signal, useSignal, useSignalEffect, signal } from '@preact/signals'
+import { type Signal, useSignal, useSignalEffect, signal, useComputed } from '@preact/signals'
 import { IoPause, IoPlay, IoStop } from 'react-icons/io5'
 import { cellsToTune, height, tuneToCells, beats, type Cells, yNoteMap, playNote, play, cellsEq } from './sequencer-utils'
 import { instruments , type InstrumentType, reverseInstrumentKey } from '../../../engine/src/api'
@@ -66,9 +66,10 @@ function Cell(props: CellProps) {
 	const classes = [styles.cell]
 	if (props.x % 2 === 0) classes.push(styles.beat)
 	if (props.x % 8 === 0) classes.push(styles.downbeat)
-	if ((height - props.y) % 8 === 0) classes.push(styles.root)
+	if ((height - props.y) % 7 === 1) classes.push(styles.root)
 
-	const cell = props.cells.value[`${props.x}_${props.y}`]
+	const cellSignal = useComputed(() => props.cells.value[`${props.x}_${props.y}`])
+	const cell = cellSignal.value
 	const backgroundColor = cell ? colorMap[cell] : 'transparent'
 	const color = cell ? lightColorMap[cell] : 'black'
 
@@ -134,6 +135,26 @@ function Cell(props: CellProps) {
 }
 
 const instrument = signal<InstrumentType>('sine')
+
+function Column({ x, height, lastDraw, instrument, erasing, cells, setCells, bpm, beat }: {
+	x: number, height: number,
+	lastDraw: Signal<[number, number] | null>,
+	instrument: Signal<InstrumentType>,
+	erasing: Signal<boolean>,
+	cells: Signal<Cells>,
+	setCells: (cells: Cells) => void,
+	bpm: Signal<number>,
+	beat: Signal<number>
+}) {
+	const isPlayhead = useComputed(() => beat.value === x)
+	return (
+		<div class={`${styles.column} ${isPlayhead.value ? styles.playhead : ''}`}>
+			{new Array(height).fill(0).map((_, y) => (
+				<Cell key={`${x},${y}`} {...{ x, y, lastDraw, instrument, erasing, cells, setCells, bpm }} />
+			))}
+		</div>
+	)
+}
 
 export default function SequencerEditor(props: EditorProps) {
 	const erasing = useSignal(false)
@@ -212,11 +233,7 @@ export default function SequencerEditor(props: EditorProps) {
 		<div class={styles.container}>
 			<div class={styles.grid}>
 				{new Array(beats).fill(0).map((_, x) => (
-					<div key={x} class={`${styles.column} ${beat.value === x ? styles.playhead : ''}`}>
-						{new Array(height).fill(0).map((_, y) => (
-							<Cell key={`${x},${y}`} {...{ x, y, lastDraw, instrument, erasing, cells, setCells, bpm }} />
-						))}
-					</div>
+					<Column key={x} {...{ x, height, lastDraw, instrument, erasing, cells, setCells, bpm, beat }} />
 				))}
 			</div>
 

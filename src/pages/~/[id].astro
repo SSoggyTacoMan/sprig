@@ -76,10 +76,13 @@ console.log(`Found game: ${game.id}, name: ${game.name}, unprotected: ${game.unp
 
 // Disable beta features for review games (unprotected games)
 let shouldGameUseBetaCollabAndSavingFeatures = false;
-// if (!game.unprotected) {
-// 	const isWhitelisted = await isAccountWhitelistedToUseCollabAndSavingBetaFeatures(session.user.id, session.user.email);
-// 	shouldGameUseBetaCollabAndSavingFeatures = false;//Boolean(isWhitelisted) || Boolean(game.isSavedOnBackend);
-// }
+if (!game.unprotected) {
+	const isWhitelisted = await isAccountWhitelistedToUseCollabAndSavingBetaFeatures(session.user.id, session.user.email);
+	shouldGameUseBetaCollabAndSavingFeatures = Boolean(isWhitelisted) || Boolean(game.isSavedOnBackend);
+}
+
+// Force enable for local testing
+shouldGameUseBetaCollabAndSavingFeatures = true;
 
 if(shouldGameUseBetaCollabAndSavingFeatures){
 	console.log("Game is using beta collab and saving features");

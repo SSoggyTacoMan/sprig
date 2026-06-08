@@ -1,18 +1,16 @@
 /* ═══════════════════════════════════════════════════════
-   Problems Panel — Sprig theme, colorful
+   Problems Panel — VS Code native style
    ═══════════════════════════════════════════════════════ */
 
 /* ── Shell ─────────────────────────────────────────────── */
 .panel {
 	display: flex;
 	flex-direction: column;
-	/* match the editor's floating/dark background */
-	background: var(--bg-floating, #191919);
-	color: #e8e8e8;
+	background: #1e1e1e;
+	color: #cccccc;
 	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 	font-size: 13px;
 	overflow: hidden;
-	border-top: 2px solid var(--accent, #078969);
 	min-height: 0;
 }
 
@@ -21,28 +19,31 @@
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
-	padding: 0 8px 0 14px;
-	height: 36px;
-	min-height: 36px;
-	background: var(--bg-dark, #2f2f2f);
-	border-bottom: 1px solid rgba(255,255,255,0.07);
-	gap: 8px;
+	padding: 0 8px 0 20px;
+	height: 35px;
+	min-height: 35px;
+	background: #1e1e1e;
 	user-select: none;
 }
 
 .titleArea {
 	display: flex;
 	align-items: center;
-	gap: 8px;
+	gap: 6px;
 	flex-shrink: 0;
+	height: 100%;
 }
 
 .title {
 	font-size: 11px;
-	font-weight: 700;
 	text-transform: uppercase;
-	letter-spacing: 0.08em;
-	color: var(--accent-light, #80c3a0);
+	color: #e8e8e8;
+	border-bottom: 1px solid #007acc;
+	height: 100%;
+	display: flex;
+	align-items: center;
+	padding-top: 1px;
+	cursor: pointer;
 }
 
 /* ── Badges ────────────────────────────────────────────── */
@@ -50,25 +51,22 @@
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	min-width: 17px;
-	height: 17px;
+	min-width: 18px;
+	height: 18px;
 	padding: 0 5px;
 	border-radius: 9px;
-	font-size: 10px;
-	font-weight: 700;
-	line-height: 1;
+	font-size: 11px;
+	background: rgba(255,255,255,0.1);
+	color: #cccccc;
+	font-weight: normal;
 }
 
 .badgeError {
 	composes: badge;
-	background: var(--error, #e03131);
-	color: #fff;
 }
 
 .badgeWarn {
 	composes: badge;
-	background: #e8a020;
-	color: #1a1a1a;
 }
 
 /* ── Controls (filter + buttons) ───────────────────────── */
@@ -84,22 +82,21 @@
 .filterWrap {
 	display: flex;
 	align-items: center;
-	gap: 5px;
-	background: rgba(255,255,255,0.07);
-	border: 1px solid rgba(255,255,255,0.1);
-	border-radius: 4px;
-	padding: 3px 8px;
+	gap: 4px;
+	background: transparent;
+	border: 1px solid transparent;
+	padding: 2px 6px;
 	min-width: 0;
 	flex: 1;
-	max-width: 260px;
+	max-width: 200px;
 }
 .filterWrap:focus-within {
-	border-color: var(--accent, #078969);
-	background: rgba(7,137,105,0.08);
+	border-color: #007acc;
+	background: rgba(255,255,255,0.05);
 }
 
 .filterIcon {
-	color: var(--fg-muted, #9d9d9d);
+	color: #cccccc;
 	font-size: 13px;
 	flex-shrink: 0;
 }
@@ -109,7 +106,7 @@
 	background: none;
 	border: none;
 	outline: none;
-	color: #e8e8e8;
+	color: #cccccc;
 	font-size: 12px;
 	font-family: inherit;
 }
@@ -121,21 +118,21 @@
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	width: 26px;
-	height: 26px;
+	width: 24px;
+	height: 24px;
 	padding: 0;
 	border: none;
 	background: none;
-	color: var(--fg-muted, #9d9d9d);
+	color: #cccccc;
 	cursor: pointer;
 	border-radius: 4px;
 	font-size: 15px;
-	transition: background 0.12s, color 0.12s;
+	transition: background 0.1s, color 0.1s;
 	flex-shrink: 0;
 }
 .btn:hover {
 	background: rgba(255,255,255,0.1);
-	color: #fff;
+	color: #ffffff;
 }
 
 /* ── Body/scroll area ──────────────────────────────────── */
@@ -146,11 +143,13 @@
 	scrollbar-width: thin;
 	scrollbar-color: rgba(255,255,255,0.15) transparent;
 }
-.body::-webkit-scrollbar { width: 6px; }
+.body::-webkit-scrollbar { width: 10px; }
 .body::-webkit-scrollbar-track { background: transparent; }
 .body::-webkit-scrollbar-thumb {
-	background: rgba(255,255,255,0.15);
-	border-radius: 3px;
+	background: rgba(255,255,255,0.1);
+}
+.body::-webkit-scrollbar-thumb:hover {
+	background: rgba(255,255,255,0.2);
 }
 
 /* ── Empty state ───────────────────────────────────────── */
@@ -168,41 +167,23 @@
 
 .emptyIcon {
 	font-size: 16px;
-	color: var(--accent, #078969);
+	color: #007acc;
 	opacity: 0.6;
 }
 
 /* ── Summary strip ─────────────────────────────────────── */
 .summary {
-	display: flex;
-	align-items: center;
-	gap: 14px;
-	padding: 5px 14px;
-	font-size: 11px;
-	background: rgba(255,255,255,0.03);
-	border-bottom: 1px solid rgba(255,255,255,0.06);
+	display: none; /* Hide summary strip to match VS Code native */
 }
-
-.summaryError {
-	display: inline-flex;
-	align-items: center;
-	gap: 5px;
-	color: #ff6b6b;
-	font-weight: 600;
-}
-
-.summaryWarn {
-	display: inline-flex;
-	align-items: center;
-	gap: 5px;
-	color: #ffd93d;
-	font-weight: 600;
-}
+.summaryError { display: none; }
+.summaryWarn { display: none; }
 
 /* ── Problem list ──────────────────────────────────────── */
 .list {
 	display: flex;
 	flex-direction: column;
+	padding-top: 4px;
+	padding-bottom: 4px;
 }
 
 .problemItem {
@@ -210,56 +191,43 @@
 	flex-direction: column;
 }
 
-/* alternating row shading */
 .problemRow {
 	display: flex;
-	align-items: baseline;
-	gap: 7px;
-	padding: 6px 12px 6px 10px;
+	align-items: center;
+	gap: 6px;
+	padding: 2px 20px;
 	cursor: pointer;
 	font-size: 13px;
-	line-height: 1.4;
-	transition: background 0.1s;
+	line-height: 22px;
 }
-.rowEven { background: rgba(255,255,255,0.02); }
+.rowEven { background: transparent; }
 .rowOdd  { background: transparent; }
 
 .problemRow:hover {
-	background: rgba(7,137,105,0.12);
+	background: rgba(255,255,255,0.04);
 }
 
 /* ── Row contents ──────────────────────────────────────── */
 .chevron {
-	display: flex;
-	align-items: center;
-	font-size: 12px;
-	color: transparent;
-	width: 13px;
-	flex-shrink: 0;
-	transition: color 0.1s;
+	display: none; /* Remove chevron as we don't have file headers */
 }
-.chevronVisible { color: rgba(255,255,255,0.35); }
-.problemRow:hover .chevronVisible { color: rgba(255,255,255,0.7); }
+.chevronVisible { display: none; }
 
 /* severity icons */
 .iconError {
 	display: flex;
 	align-items: center;
-	font-size: 15px;
-	color: #ff6b6b;
+	font-size: 14px;
+	color: #f14c4c;
 	flex-shrink: 0;
-	margin-top: 1px;
-	filter: drop-shadow(0 0 4px rgba(255,107,107,0.5));
 }
 
 .iconWarn {
 	display: flex;
 	align-items: center;
-	font-size: 15px;
-	color: #ffd93d;
+	font-size: 14px;
+	color: #cca700;
 	flex-shrink: 0;
-	margin-top: 1px;
-	filter: drop-shadow(0 0 4px rgba(255,217,61,0.4));
 }
 
 .message {
@@ -268,7 +236,7 @@
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
-	color: #f0f0f0;
+	color: #cccccc;
 	font-size: 13px;
 }
 
@@ -276,36 +244,32 @@
 .meta {
 	display: flex;
 	align-items: center;
-	gap: 8px;
+	gap: 6px;
 	flex-shrink: 0;
-	padding-left: 8px;
 	margin-left: auto;
 }
 
 .source {
-	font-size: 11px;
-	color: var(--accent-light, #80c3a0);
-	font-style: italic;
+	font-size: 12px;
+	color: rgba(255,255,255,0.4);
 }
 
 .loc {
-	font-size: 11px;
-	color: rgba(255,255,255,0.35);
-	font-family: "SF Mono", Menlo, Consolas, monospace;
+	font-size: 12px;
+	color: rgba(255,255,255,0.4);
 	white-space: nowrap;
 }
 
 /* ── Expanded code frame ───────────────────────────────── */
 .codeFrame {
 	margin: 0;
-	padding: 8px 12px 8px 34px;
+	padding: 4px 12px 4px 44px;
 	font-family: "SF Mono", Menlo, Monaco, Consolas, monospace;
 	font-size: 12px;
-	line-height: 1.65;
-	/* colorful: pink/coral for the code frame text */
-	color: #ff9fb2;
-	background: rgba(0,0,0,0.35);
-	border-left: 3px solid #ff6b6b;
+	line-height: 1.5;
+	color: rgba(255,255,255,0.5);
+	background: transparent;
+	border-left: none;
 	white-space: pre;
 	overflow-x: auto;
 	tab-size: 2;
@@ -314,30 +278,35 @@
 /* ── Light Theme Overrides ─────────────────────────────── */
 :global(.theme-light) .panel {
 	background: #ffffff;
-	color: #000000;
+	color: #616161;
 }
 
 :global(.theme-light) .header {
-	background: #f0f0f0;
+	background: #ffffff;
 	border-bottom: 1px solid rgba(0,0,0,0.1);
 }
 
 :global(.theme-light) .title {
-	color: var(--accent, #078969);
+	color: #333333;
+	border-bottom: 1px solid #005a9e;
 }
 
-:global(.theme-light) .filterWrap {
-	background: rgba(0,0,0,0.05);
-	border: 1px solid rgba(0,0,0,0.1);
+:global(.theme-light) .badge {
+	background: rgba(0,0,0,0.08);
+	color: #333333;
 }
 
 :global(.theme-light) .filterWrap:focus-within {
-	border-color: var(--accent, #078969);
-	background: rgba(7,137,105,0.08);
+	border-color: #007acc;
+	background: #ffffff;
+}
+
+:global(.theme-light) .filterIcon {
+	color: #616161;
 }
 
 :global(.theme-light) .filterInput {
-	color: #000000;
+	color: #333333;
 }
 
 :global(.theme-light) .filterInput::placeholder {
@@ -345,63 +314,46 @@
 }
 
 :global(.theme-light) .btn {
-	color: var(--fg-muted, #9d9d9d);
+	color: #616161;
 }
 
 :global(.theme-light) .btn:hover {
-	background: rgba(0,0,0,0.1);
-	color: #000000;
+	background: rgba(0,0,0,0.05);
+	color: #333333;
 }
 
 :global(.theme-light) .empty {
 	color: rgba(0,0,0,0.5);
 }
 
-:global(.theme-light) .summary {
-	background: rgba(0,0,0,0.03);
-	border-bottom: 1px solid rgba(0,0,0,0.06);
-}
-
-:global(.theme-light) .rowEven {
-	background: rgba(0,0,0,0.02);
-}
-
-:global(.theme-light) .rowOdd {
-	background: transparent;
-}
-
-:global(.theme-light) .chevronVisible {
-	color: rgba(0,0,0,0.4);
-}
-
-:global(.theme-light) .problemRow:hover .chevronVisible {
-	color: rgba(0,0,0,0.7);
+:global(.theme-light) .problemRow:hover {
+	background: rgba(0,0,0,0.04);
 }
 
 :global(.theme-light) .iconError {
-	color: #e03131;
-	filter: none;
+	color: #e51400;
 }
 
 :global(.theme-light) .iconWarn {
-	color: #e8a020;
-	filter: none;
+	color: #bf8803;
 }
 
 :global(.theme-light) .message {
-	color: #222222;
+	color: #333333;
 }
 
-:global(.theme-light) .source {
-	color: var(--accent, #078969);
-}
-
+:global(.theme-light) .source,
 :global(.theme-light) .loc {
 	color: rgba(0,0,0,0.4);
 }
 
 :global(.theme-light) .codeFrame {
-	color: #e03131;
-	background: rgba(0,0,0,0.05);
-	border-left: 3px solid #e03131;
+	color: rgba(0,0,0,0.5);
+}
+
+:global(.theme-light) .body::-webkit-scrollbar-thumb {
+	background: rgba(0,0,0,0.1);
+}
+:global(.theme-light) .body::-webkit-scrollbar-thumb:hover {
+	background: rgba(0,0,0,0.2);
 }

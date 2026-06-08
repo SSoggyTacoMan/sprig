@@ -830,7 +830,7 @@ export default function EditorNavbar(props: EditorNavbarProps) {
 					</Button>
 				</li>
 				<li>
-					{props.persistenceState.value.kind === "PERSISTED" && (
+					{(props.persistenceState.value.kind === "PERSISTED" || props.persistenceState.value.kind === "COLLAB") && (
 						<Button
 							onClick={async () => {
 								if (
@@ -876,8 +876,8 @@ export default function EditorNavbar(props: EditorNavbarProps) {
 									<div className={styles.inputGroup}>
 										<div className={styles.inputField}>
 											<label htmlFor="gameTitle">Game Title</label>
-											{props.persistenceState.value.kind === "PERSISTED" &&
-												props.persistenceState.value.game !== "LOADING" ? (
+											{(props.persistenceState.value.kind === "PERSISTED" || props.persistenceState.value.kind === "COLLAB") &&
+												props.persistenceState.value.game !== "LOADING" && typeof props.persistenceState.value.game !== "string" ? (
 												<input
 													id="gameTitle"
 													value={props.persistenceState.value.game.name ?? ""}
@@ -997,8 +997,8 @@ export default function EditorNavbar(props: EditorNavbarProps) {
 										View on GitHub
 									</Button>
 									<Button class={styles.newPRButton} onClick={() => {publishSuccess.value = false; 
-										if (props.persistenceState.value.kind == "PERSISTED" 
-										&& props.persistenceState.value.game != "LOADING") 
+										if ((props.persistenceState.value.kind === "PERSISTED" || props.persistenceState.value.kind === "COLLAB") 
+										&& props.persistenceState.value.game !== "LOADING" && typeof props.persistenceState.value.game !== "string") 
 											props.persistenceState.value.game.isPublished = false;
 										readyPublish.value = true
 									}

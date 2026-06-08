@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from 'preact/hooks'
+import { useRef, useState, useEffect } from 'preact/hooks'
 import * as monaco from 'monaco-editor'
 import styles from './monaco.module.css'
-import { theme, errorLog, isNewSaveStrat, ConnectionStatus, PersistenceStateKind, monacoEditorText, getEffectiveTheme } from '../lib/state'
+import { isNewSaveStrat, monacoEditorText, errorLog, theme, PersistenceStateKind, getEffectiveTheme } from '../lib/state'
+import { ConnectionStatus } from '../lib/state'
 import type { PersistenceState, RoomState, RoomParticipant } from '../lib/state'
 import { type Signal, useSignal, useSignalEffect } from '@preact/signals'
 import type { Awareness } from 'y-protocols/awareness'
@@ -11,8 +12,6 @@ import { startSavingGame } from './big-interactive-pages/editor'
 import type { MonacoBinding } from 'y-monaco'
 import { setupMonacoSprig } from '../lib/monaco/widgets'
 import { defineThemes } from '../lib/monaco/themes'
-
-
 
 interface MonacoProps {
 	class?: string | undefined
@@ -46,7 +45,8 @@ export default function MonacoComponent(props: MonacoProps) {
 	useSignalEffect(() => {
 		if(!isNewSaveStrat.value) return
 		if(yProviderAwarenessSignal.value === undefined) return;
-		yProviderAwarenessSignal.value.on("change", () => {
+		
+		const onChange = () => {
 			yProviderAwarenessSignal.value?.getStates().forEach((state) => {
 				try{
 					if(props.persistenceState === undefined) throw new Error("Persistence state is undefined");
@@ -63,8 +63,22 @@ export default function MonacoComponent(props: MonacoProps) {
 					}
 				} catch(e){}	
 			});
-		});
+		};
+
+		yProviderAwarenessSignal.value.on("change", onChange);
+		
+		return () => {
+			yProviderAwarenessSignal.value?.off("change", onChange);
+		};
 	});
+
+	useEffect(() => {
+		return () => {
+			provider.current?.destroy();
+			yDoc.current?.destroy();
+			bindingRef.current?.destroy();
+		};
+	}, []);
 
 	async function setupYjs(editor: monaco.editor.IStandaloneCodeEditor) {
 		if(!props.roomState || !props.persistenceState) return;
@@ -135,7 +149,7 @@ export default function MonacoComponent(props: MonacoProps) {
 				value: props.initialCode,
 				language: 'javascript',
 				theme: getEffectiveTheme(theme.value) === 'dark' ? 'sprig-dark' : 'sprig-light',
-				minimap: { enabled: false },
+				minimap: { enabled: true, scale: 0.75, maxColumn: 80 },
 				wordWrap: 'on',
 				tabSize: 2,
 				insertSpaces: false,
