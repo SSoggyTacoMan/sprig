@@ -156,6 +156,18 @@ export async function ensureReviewLabels({ owner, repo, token }) {
 
 		if (alias) {
 			await updateLabelIfNeeded({ owner, repo, token, currentName: alias.name, name, config });
+			// Remove any remaining orphaned aliases (e.g. old "Vibecoded" after "AI Suspicion" already exists)
+			for (const aliasName of config.aliases) {
+				const orphan = byLowerName.get(aliasName.toLowerCase());
+				if (orphan && orphan.name.toLowerCase() !== name.toLowerCase()) {
+					try {
+						await githubRequest(token, "DELETE", `/repos/${owner}/${repo}/labels/${encodeURIComponent(orphan.name)}`);
+						console.log(`Deleted orphaned alias label: ${orphan.name}`);
+					} catch (e) {
+						console.warn(`Failed to delete orphan label ${orphan.name}:`, e.message);
+					}
+				}
+			}
 			continue;
 		}
 
@@ -168,6 +180,22 @@ export async function ensureReviewLabels({ owner, repo, token }) {
 			byLowerName.set(created.name.toLowerCase(), created);
 		} catch (error) {
 			if (!String(error.message).includes("already_exists")) throw error;
+		}
+	}
+
+	// Second pass: delete any alias labels that still exist alongside their canonical label
+	for (const [name, config] of Object.entries(LABELS)) {
+		if (!byLowerName.has(name.toLowerCase())) continue; // canonical doesn't exist, skip
+		for (const aliasName of config.aliases) {
+			const orphan = byLowerName.get(aliasName.toLowerCase());
+			if (orphan) {
+				try {
+					await githubRequest(token, "DELETE", `/repos/${owner}/${repo}/labels/${encodeURIComponent(orphan.name)}`);
+					console.log(`Deleted orphaned alias label: ${orphan.name}`);
+				} catch (e) {
+					console.warn(`Failed to delete orphan label ${orphan.name}:`, e.message);
+				}
+			}
 		}
 	}
 }
