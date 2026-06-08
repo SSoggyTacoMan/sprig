@@ -20,14 +20,21 @@ if (!token) throw new Error("GITHUB_TOKEN is required");
 
 const { owner, repo } = getRepository();
 const event = readGitHubEvent();
-const pullRequest = event.pull_request || event.issue;
+let pullRequest = event.pull_request || event.issue;
+let prNumber = pullRequest?.number;
 
-if (!pullRequest || (!event.pull_request && !event.issue?.pull_request)) {
+if (process.env.TEST_PR_NUMBER) {
+	prNumber = parseInt(process.env.TEST_PR_NUMBER);
+	try {
+		pullRequest = await githubRequest(token, "GET", `/repos/${owner}/${repo}/pulls/${prNumber}`);
+	} catch (e) {
+		console.error("Failed to fetch PR for testing:", e);
+		process.exit(1);
+	}
+} else if (!pullRequest || (!event.pull_request && !event.issue?.pull_request)) {
 	console.log("No pull request in event; skipping auto triage.");
 	process.exit(0);
 }
-
-const prNumber = pullRequest.number;
 
 if (pullRequest.draft) {
 	console.log("PR is a draft. Skipping triage.");
