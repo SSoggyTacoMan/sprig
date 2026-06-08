@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'preact/hooks'
-import Editor, { useMonaco } from '@monaco-editor/react'
-import type * as monaco from 'monaco-editor'
+import * as monaco from 'monaco-editor'
 import styles from './monaco.module.css'
 import { theme, errorLog, isNewSaveStrat, ConnectionStatus, PersistenceStateKind, monacoEditorText, getEffectiveTheme } from '../lib/state'
 import type { PersistenceState, RoomState, RoomParticipant } from '../lib/state'
@@ -13,6 +12,8 @@ import type { MonacoBinding } from 'y-monaco'
 import { setupMonacoSprig } from '../lib/monaco/widgets'
 import { defineThemes } from '../lib/monaco/themes'
 
+
+
 interface MonacoProps {
 	class?: string | undefined
 	persistenceState: Signal<PersistenceState> | undefined
@@ -24,10 +25,10 @@ interface MonacoProps {
 }
 
 export default function MonacoComponent(props: MonacoProps) {
+	const containerRef = useRef<HTMLDivElement>(null);
 	const [editorRef, setEditorRef] = useState<monaco.editor.IStandaloneCodeEditor>();
 	const yProviderAwarenessSignal = useSignal<Awareness | undefined>(undefined);
 	const bindingRef = useRef<MonacoBinding>();
-	const monacoInst = useMonaco();
 	
 	let yDoc = useRef<Y.Doc>();
 	let provider = useRef<WebrtcProvider>();
@@ -65,25 +66,7 @@ export default function MonacoComponent(props: MonacoProps) {
 		});
 	});
 
-	async function handleEditorDidMount(editor: monaco.editor.IStandaloneCodeEditor, monacoSystem: typeof monaco) {
-		setEditorRef(editor);
-		props.onEditorView?.(editor);
-		
-		setupMonacoSprig(monacoSystem, editor);
-		monacoEditorText.value = editor.getValue();
-
-		editor.addCommand(monacoSystem.KeyMod.CtrlCmd | monacoSystem.KeyCode.Enter, () => {
-			onRunShortcutRef.current?.();
-		});
-
-		if(!isNewSaveStrat.value) {
-			editor.onDidChangeModelContent(() => {
-				monacoEditorText.value = editor.getValue();
-				onCodeChangeRef.current?.();
-			});
-			return;
-		}
-
+	async function setupYjs(editor: monaco.editor.IStandaloneCodeEditor) {
 		if(!props.roomState || !props.persistenceState) return;
 
 		try {
@@ -146,37 +129,65 @@ export default function MonacoComponent(props: MonacoProps) {
 	}
 
 	useEffect(() => {
-		if(editorRef && monacoInst) {
+		if (containerRef.current) {
+			defineThemes(monaco);
+			const editor = monaco.editor.create(containerRef.current, {
+				value: props.initialCode,
+				language: 'javascript',
+				theme: getEffectiveTheme(theme.value) === 'dark' ? 'sprig-dark' : 'sprig-light',
+				minimap: { enabled: false },
+				wordWrap: 'on',
+				tabSize: 2,
+				insertSpaces: false,
+				codeLens: true,
+				fontFamily: 'monospace',
+				automaticLayout: true
+			});
+
+			setEditorRef(editor);
+			props.onEditorView?.(editor);
+			
+			setupMonacoSprig(monaco, editor);
+			monacoEditorText.value = editor.getValue();
+
+			editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
+				onRunShortcutRef.current?.();
+			});
+
+			if (!isNewSaveStrat.value) {
+				editor.onDidChangeModelContent(() => {
+					monacoEditorText.value = editor.getValue();
+					onCodeChangeRef.current?.();
+				});
+			} else {
+				setupYjs(editor);
+			}
+
+			return () => editor.dispose();
+		}
+	}, []);
+
+	useEffect(() => {
+		if(editorRef && theme.value) {
+			monaco.editor.setTheme(getEffectiveTheme(theme.value) === 'dark' ? 'sprig-dark' : 'sprig-light');
+		}
+	}, [theme.value, editorRef]);
+
+	useEffect(() => {
+		if(editorRef) {
 			const markers = errorLog.value.filter(e => e.line).map(e => ({
 				startLineNumber: e.line!,
 				startColumn: e.column || 1,
 				endLineNumber: e.line!,
 				endColumn: 1000,
 				message: e.description,
-				severity: monacoInst.MarkerSeverity.Error
+				severity: monaco.MarkerSeverity.Error
 			}));
-			monacoInst.editor.setModelMarkers(editorRef.getModel()!, "sprig", markers);
+			monaco.editor.setModelMarkers(editorRef.getModel()!, "sprig", markers);
 		}
-	}, [errorLog.value, editorRef, monacoInst]);
+	}, [errorLog.value, editorRef]);
 
 	return (
-		<div class={`${styles.container} ${props.class ?? ""}`}>
-			<Editor 
-				height="100%" 
-				defaultLanguage="javascript" 
-				defaultValue={props.initialCode} 
-				theme={getEffectiveTheme(theme.value) === 'dark' ? 'sprig-dark' : 'sprig-light'}
-				beforeMount={defineThemes}
-				onMount={handleEditorDidMount}
-				options={{
-					minimap: { enabled: false },
-					wordWrap: 'on',
-					tabSize: 2,
-					insertSpaces: false,
-					codeLens: true,
-					fontFamily: 'monospace'
-				}}
-			/>
-		</div>
+		<div class={`${styles.container} ${props.class ?? ""}`} ref={containerRef}></div>
 	)
 }
