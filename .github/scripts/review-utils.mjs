@@ -46,6 +46,11 @@ export const LABELS = {
 		description: "Reviewer needs author to explain AI usage",
 		aliases: ["review:ai-concern"],
 	},
+	"AI Suspicion": {
+		color: "e36209",
+		description: "Automated analysis flagged this submission as likely AI-generated",
+		aliases: ["AI Suspection", "vibecoded", "ai-suspicion"],
+	},
 	"Potential Duplicate": {
 		color: "8250df",
 		description: "Author has more than one open submission",
