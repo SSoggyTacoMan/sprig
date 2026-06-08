@@ -42,6 +42,72 @@ if (pullRequest.draft) {
 }
 
 if (event.comment && event.action === "created") {
+	const commentBody = (event.comment.body ?? "").trim();
+	const commenterLogin = event.comment.user?.login;
+
+	// /check-ai command — only for authorized collaborators
+	if (commentBody === "/check-ai") {
+		let isAuthorized = false;
+		try {
+			const permData = await githubRequest(token, "GET", `/repos/${owner}/${repo}/collaborators/${commenterLogin}/permission`);
+			const perm = permData.permission;
+			isAuthorized = perm === "admin" || perm === "maintain" || perm === "write";
+		} catch (e) {
+			console.log(`Permission check failed for ${commenterLogin}:`, e.message);
+		}
+
+		if (!isAuthorized) {
+			console.log(`${commenterLogin} is not an authorized collaborator. Ignoring /check-ai.`);
+			process.exit(0);
+		}
+
+		console.log(`/check-ai triggered by authorized user ${commenterLogin}`);
+
+		const latestFiles = await githubPaginated(token, `/repos/${owner}/${repo}/pulls/${prNumber}/files`);
+		const jsFiles = latestFiles.filter(f => /^games\/[A-Za-z0-9_-]+\.js$/.test(f.filename));
+
+		if (jsFiles.length !== 1) {
+			console.log("Could not find exactly one game file. Aborting /check-ai.");
+			process.exit(0);
+		}
+
+		const workspace = path.resolve(process.env.SUBMISSION_PATH ?? process.cwd());
+		const gameFilePath = path.join(workspace, jsFiles[0].filename);
+		const code = readFileSafe(gameFilePath);
+
+		if (!code) {
+			console.log("Could not read game file. Aborting /check-ai.");
+			process.exit(0);
+		}
+
+		console.log(`Running AI analysis on ${jsFiles[0].filename}...`);
+		const vibecoding = await checkVibecoding(code);
+
+		// Update the AI Suspicion label
+		if (vibecoding && vibecoding.ai_probability >= 80) {
+			await addLabels({ owner, repo, token, issueNumber: prNumber, labels: ["AI Suspicion"] });
+		} else {
+			await removeLabel({ owner, repo, token, issueNumber: prNumber, label: "AI Suspicion" });
+		}
+
+		// Post/update a dedicated comment with the result
+		const aiSection = vibecoding
+			? `<details>\n<summary><b>AI Suspicion (AI Probability: ${vibecoding.ai_probability}%)</b></summary>\n\n**Consensus:** ${vibecoding.reason}\n</details>`
+			: "_AI analysis returned no result._";
+
+		const resultBody = `<!-- check-ai-result -->\n> ✅ **/check-ai** run by @${commenterLogin}\n\n${aiSection}`;
+		await upsertBotComment({
+			owner,
+			repo,
+			token,
+			issueNumber: prNumber,
+			marker: "<!-- check-ai-result -->",
+			body: resultBody,
+		});
+
+		process.exit(0);
+	}
+
 	if (pullRequest.state === "closed" && event.comment.user.login === pullRequest.user.login) {
 		const labels = (pullRequest.labels ?? []).map(l => typeof l === "string" ? l : l.name);
 		if (hasLabel(labels, "Submission")) {
@@ -155,7 +221,9 @@ async function validateSubmission({ pullRequest, pullFiles, workspace, reviewBas
 
 	if (jsFiles.length === 1) {
 		gameFile = jsFiles[0];
-		const result = await validateSingleGameFile(gameFile, workspace, addCheck, warnings);
+		// Skip the expensive AI check when a new commit is pushed — only authorized users can trigger it via /check-ai
+		const skipAI = event.action === "synchronize";
+		const result = await validateSingleGameFile(gameFile, workspace, addCheck, warnings, skipAI);
 		metadata = result.metadata;
 		similarity = result.similarity;
 		vibecoding = result.vibecoding;
@@ -696,6 +764,8 @@ ${links.join("\n")}
 ${checksSection}${warningLines.join("\n")}
 
 ${result.ok ? "Reviewers: please use the play link to playtest, then approve or request changes." : `@${pullRequest.user.login}: push fixes to this PR ([edit file](${editUrl})). These checks rerun automatically.`}
+
+> ℹ️ Authorized reviewers: post \`/check-ai\` to run a fresh AI analysis on the latest code.
 `;
 }
 
@@ -772,7 +842,7 @@ function validateImages(imageFiles, gameBase, owner, repo, pullRequest, addCheck
 	return null;
 }
 
-async function validateSingleGameFile(gameFile, workspace, addCheck, warnings) {
+async function validateSingleGameFile(gameFile, workspace, addCheck, warnings, skipAI = false) {
 	let metadata = null;
 	let similarity = { score: 0, match: null };
 	let vibecoding = null;
@@ -826,9 +896,13 @@ async function validateSingleGameFile(gameFile, workspace, addCheck, warnings) {
 		warnings.push(`Similarity is ${formatPercent(similarity.score)} against \`${similarity.match}\`. A reviewer or lead should compare both games.`);
 	}
 
-	vibecoding = await checkVibecoding(content);
-	if (vibecoding && vibecoding.ai_probability >= 80) {
-		warnings.push(`AI Generation Risk: ${vibecoding.ai_probability}% probability. Reason: ${vibecoding.reason}`);
+	if (!skipAI) {
+		vibecoding = await checkVibecoding(content);
+		if (vibecoding && vibecoding.ai_probability >= 80) {
+			warnings.push(`AI Generation Risk: ${vibecoding.ai_probability}% probability. Reason: ${vibecoding.reason}`);
+		}
+	} else {
+		console.log("Skipping AI check (synchronize event). Use /check-ai to trigger manually.");
 	}
 
 	return { metadata, similarity, vibecoding };
