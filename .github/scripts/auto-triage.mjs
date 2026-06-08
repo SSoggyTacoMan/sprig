@@ -456,8 +456,21 @@ ${code.substring(0, 5000)}`;
 				}),
 				signal: controller.signal
 			})
-			.then(res => res.json())
+			.then(async res => {
+				if (!res.ok) {
+					throw new Error(`HTTP ${res.status}: ${await res.text()}`);
+				}
+				const text = await res.text();
+				try {
+					return JSON.parse(text);
+				} catch (e) {
+					throw new Error(`Invalid JSON response: ${text.substring(0, 50)}...`);
+				}
+			})
 			.then(data => {
+				if (!data.choices?.[0]?.message?.content) {
+					throw new Error(`Unexpected API response: ${JSON.stringify(data).substring(0, 100)}...`);
+				}
 				const content = data.choices[0].message.content.trim();
 				const bt = String.fromCharCode(96);
 				const jsonString = content.startsWith(bt + bt + bt) ? content.replace(new RegExp("^" + bt + "{3}(json)?\\s*|" + bt + "{3}$", "g"), "").trim() : content;
