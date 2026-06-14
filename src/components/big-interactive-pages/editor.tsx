@@ -655,8 +655,10 @@ export default function Editor({ persistenceState: persistenceStateProp, cookies
 		initialCode = persistenceState.value.code;
 	else if (review?.code)
 		initialCode = review.code;
-	else if (persistenceState.value.kind === PersistenceStateKind.IN_MEMORY)
-		initialCode = localStorage.getItem("sprigMemory") ?? defaultExampleCode;
+	else if (persistenceState.value.kind === PersistenceStateKind.IN_MEMORY) {
+		const mem = localStorage.getItem("sprigMemory");
+		initialCode = (mem && mem.trim().length > 0) ? mem : defaultExampleCode;
+	}
 	else if (isNewSaveStrat.value && persistenceState.value.kind === PersistenceStateKind.COLLAB){
 		if(typeof persistenceState.value.game !== 'string')
 			// @ts-ignore
