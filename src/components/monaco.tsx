@@ -209,6 +209,30 @@ export default function MonacoComponent(props: MonacoProps) {
 									insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
 									documentation: 'Boilerplate for an 8x8 map literal',
 									range
+								},
+								{
+									label: 'onInput',
+									kind: monaco.languages.CompletionItemKind.Snippet,
+									insertText: "onInput('${1:w}', () => {\n\t$0\n});",
+									insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+									documentation: 'Event listener for a button press',
+									range
+								},
+								{
+									label: 'setLegend',
+									kind: monaco.languages.CompletionItemKind.Snippet,
+									insertText: "setLegend(\n\t[ '${1:player}', bitmap\\`\n........\n........\n........\n........\n........\n........\n........\n........\n\\` ]\n);\n$0",
+									insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+									documentation: 'Define the game legend (characters and their sprites)',
+									range
+								},
+								{
+									label: 'addText',
+									kind: monaco.languages.CompletionItemKind.Snippet,
+									insertText: "addText('${1:Hello World!}', { x: ${2:1}, y: ${3:1}, color: color\\`${4:3}\` });\n$0",
+									insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+									documentation: 'Add text to the screen',
+									range
 								}
 							]
 						};
