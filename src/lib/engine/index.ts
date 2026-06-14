@@ -52,8 +52,8 @@ export function transformAndThrowErrors(code: string, engineAPIKeys: string[], r
 
 export function checkMetadata(code: string): NormalizedError[] {
     const warnings: NormalizedError[] = [];
-    const blockMatch = code.match(/^\s*\/\*([\s\S]*?)\*\//);
-    if (!blockMatch) {
+    const blockMatch = code.match(/\/\*([\s\S]*?)\*\//);
+    if (!blockMatch || !blockMatch[0].includes("@title")) {
         warnings.push({
             raw: "Missing metadata block",
             description: "Missing metadata block.\n\nYour game should start with a /* ... */ comment block containing @title, @author, etc.",
@@ -64,38 +64,90 @@ export function checkMetadata(code: string): NormalizedError[] {
         return warnings;
     }
 
-    const block = blockMatch[1]!;
+    const blockStartIdx = code.indexOf(blockMatch[0]);
     
-    const titleMatch = block.match(/@title:\s*(.*)/);
-    if (!titleMatch || !titleMatch[1]!.trim()) {
-        warnings.push({ raw: "Missing @title", description: "Missing @title.\n\nPlease add a @title: to your metadata.", severity: "warning", line: 1, column: 1 });
-    } else if (titleMatch[1]!.trim() === "Change Me") {
-        warnings.push({ raw: "Boilerplate @title", description: "Boilerplate @title.\n\nPlease change the @title from 'Change Me' to your game's name.", severity: "warning", line: 1, column: 1 });
+    function getLine(strToFind: string): number {
+        const idx = code.indexOf(strToFind, blockStartIdx);
+        if (idx === -1) return 1;
+        return code.substring(0, idx).split("\n").length;
     }
 
-    const authorMatch = block.match(/@author:\s*(.*)/);
-    if (!authorMatch || !authorMatch[1]!.trim()) {
-        warnings.push({ raw: "Missing @author", description: "Missing @author.\n\nPlease add an @author: to your metadata.", severity: "warning", line: 1, column: 1 });
-    } else if (authorMatch[1]!.trim() === "Change Me") {
-        warnings.push({ raw: "Boilerplate @author", description: "Boilerplate @author.\n\nPlease change the @author from 'Change Me' to your name.", severity: "warning", line: 1, column: 1 });
+    function getMetadataValue(key: string): { value: string, line: number } | null {
+        // Matches e.g. "@title: My Game" until the next "@" or "*/"
+        const match = code.match(new RegExp(`@${key}:\\s*([\\s\\S]*?)(?=\\n\\s*@|\\n\\s*\\*\\/|$)`));
+        if (!match) return null;
+        return { 
+            value: match[1]!.trim(), 
+            line: getLine(`@${key}:`)
+        };
     }
 
-    const tagsMatch = block.match(/@tags:\s*\[(.*)\]/);
-    if (!tagsMatch || !tagsMatch[1]!.trim()) {
-        warnings.push({ raw: "Missing @tags", description: "Missing @tags.\n\nPlease add at least one tag in @tags: [].", severity: "warning", line: 1, column: 1 });
-    } else if (tagsMatch[1]!.includes("'tag1', 'tag2'")) {
-        warnings.push({ raw: "Boilerplate @tags", description: "Boilerplate @tags.\n\nPlease change the @tags from ['tag1', 'tag2'] to relevant tags.", severity: "warning", line: 1, column: 1 });
-    }
-
-    const addedOnMatch = block.match(/@addedOn:\s*(.*)/);
-    if (!addedOnMatch || !addedOnMatch[1]!.trim()) {
-        warnings.push({ raw: "Missing @addedOn", description: "Missing @addedOn.\n\nPlease add an @addedOn: date.", severity: "warning", line: 1, column: 1 });
+    const title = getMetadataValue("title");
+    if (!title || !title.value) {
+        warnings.push({ raw: "Missing @title", description: "Missing @title.\n\nPlease add a @title: to your metadata.", severity: "warning", line: title?.line ?? 1, column: 1 });
     } else {
-        const dateStr = addedOnMatch[1]!.trim();
-        if (dateStr === "2025-00-00" || dateStr === "2026-06-14") {
-            warnings.push({ raw: "Boilerplate @addedOn", description: "Boilerplate @addedOn.\n\nPlease update the @addedOn date from the boilerplate to today's date (YYYY-MM-DD).", severity: "warning", line: 1, column: 1 });
-        } else if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
-            warnings.push({ raw: "Invalid @addedOn format", description: "Invalid @addedOn format.\n\nThe @addedOn date should be in YYYY-MM-DD format.", severity: "warning", line: 1, column: 1 });
+        const t = title.value.toLowerCase();
+        if (t === "change me" || t === "getting started" || t === "getting_started" || t === "template" || t === "my game") {
+            warnings.push({ raw: "Boilerplate @title", description: "Boilerplate @title.\n\nPlease change the @title from the template value to your game's unique name.", severity: "warning", line: title.line, column: 1 });
+        }
+    }
+
+    const author = getMetadataValue("author");
+    if (!author || !author.value) {
+        warnings.push({ raw: "Missing @author", description: "Missing @author.\n\nPlease add an @author: to your metadata.", severity: "warning", line: author?.line ?? 1, column: 1 });
+    } else {
+        const a = author.value.toLowerCase();
+        if (a === "change me" || a.includes("leo, edits") || a === "my name") {
+            warnings.push({ raw: "Boilerplate @author", description: "Boilerplate @author.\n\nPlease change the @author from the template value to your name.", severity: "warning", line: author.line, column: 1 });
+        }
+    }
+
+    const desc = getMetadataValue("description");
+    if (!desc || !desc.value) {
+        warnings.push({ raw: "Missing @description", description: "Missing @description.\n\nPlease add a @description: to your metadata.", severity: "warning", line: desc?.line ?? 1, column: 1 });
+    } else {
+        const d = desc.value.toLowerCase();
+        if (d.includes("short description about the game")) {
+            warnings.push({ raw: "Boilerplate @description", description: "Boilerplate @description.\n\nPlease update the @description to actually describe your game.", severity: "warning", line: desc.line, column: 1 });
+        }
+    }
+
+    const tags = getMetadataValue("tags");
+    if (!tags || !tags.value) {
+        warnings.push({ raw: "Missing @tags", description: "Missing @tags.\n\nPlease add at least one tag in @tags: [].", severity: "warning", line: tags?.line ?? 1, column: 1 });
+    } else {
+        try {
+            const parsed = JSON.parse(tags.value.replaceAll("'", '"'));
+            if (!Array.isArray(parsed) || parsed.length === 0) {
+                warnings.push({ raw: "Invalid @tags", description: "Invalid @tags.\n\nTags must be a non-empty array (e.g. ['maze', 'puzzle']).", severity: "warning", line: tags.line, column: 1 });
+            } else if (parsed.some((t: any) => typeof t !== "string")) {
+                warnings.push({ raw: "Invalid @tags", description: "Invalid @tags.\n\nTags must be strings.", severity: "warning", line: tags.line, column: 1 });
+            } else {
+                const hasExampleTags = parsed.some((t: string) => ["tag1", "tag2", "example", "another-example"].includes(t.toLowerCase()));
+                if (hasExampleTags) {
+                    warnings.push({ raw: "Boilerplate @tags", description: "Boilerplate @tags.\n\nPlease change the @tags from template tags to relevant ones.", severity: "warning", line: tags.line, column: 1 });
+                }
+            }
+        } catch (e) {
+            warnings.push({ raw: "Parse error @tags", description: "Parse error in @tags.\n\nPlease ensure tags are formatted like ['tag1', 'tag2'].", severity: "warning", line: tags.line, column: 1 });
+        }
+    }
+
+    const addedOn = getMetadataValue("addedOn");
+    if (!addedOn || !addedOn.value) {
+        warnings.push({ raw: "Missing @addedOn", description: "Missing @addedOn.\n\nPlease add an @addedOn: date.", severity: "warning", line: addedOn?.line ?? 1, column: 1 });
+    } else {
+        const dateStr = addedOn.value;
+        const validDate = /^\d{4}-\d{2}-\d{2}$/.test(dateStr);
+        if (!validDate) {
+            warnings.push({ raw: "Invalid @addedOn format", description: "Invalid @addedOn format.\n\nThe @addedOn date should be in YYYY-MM-DD format.", severity: "warning", line: addedOn.line, column: 1 });
+        } else {
+            const parsedDate = new Date(`${dateStr}T00:00:00Z`);
+            const now = new Date();
+            const tooOld = Math.abs(now.getTime() - parsedDate.getTime()) > 183 * 86_400_000;
+            if (tooOld || Number.isNaN(parsedDate.getTime())) {
+                warnings.push({ raw: "Outdated @addedOn", description: "Outdated @addedOn.\n\nPlease update the @addedOn date to a recent date (within 6 months).", severity: "warning", line: addedOn.line, column: 1 });
+            }
         }
     }
 
