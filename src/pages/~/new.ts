@@ -8,7 +8,7 @@ import path from 'path'
 const SPRIG_BASE_URL = process.env.SPRIG_BASE_URL || 'http://localhost:3000'
 
 const createDefaultWithTitle = (title:string) =>{
-	return defaultExampleCode.replace("@title: ", `@title: ${title}`)
+	return defaultExampleCode.replace("@title: Change Me", `@title: ${title}`)
 }
 
 export const GET: APIRoute = async ({request, cookies, redirect }) => {
