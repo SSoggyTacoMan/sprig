@@ -2100,6 +2100,13 @@ function stakeLabel() { const s = stakes[stakeIndex]; return s === "ALL" ?
   "ALL" : fmt(s); }
 function stakeValue() { const s = stakes[stakeIndex]; return s === "ALL" ?
   PlayerState.bank : Math.min(s, PlayerState.bank); }
+function selectedStakeCost() {
+  const s = stakes[stakeIndex];
+  return s === "ALL" ? Math.max(0, PlayerState.bank) : s;
+}
+function canCover(amount) {
+  return amount > 0 && PlayerState.bank + getVipCreditLimit() >= amount;
+}
 function cardSprite(n) { return cards[n - 1]; }
 function prepScreen(showHud = true) { clearText(); setMap(blankMap);
   if (showHud) drawHud(); }
@@ -2930,7 +2937,7 @@ function pressure() {
 // eslint-disable-next-line sonarjs/cognitive-complexity
 function spendStake(decreaseDeadline = true) { // NOSONAR
   const selectedStake = stakes[stakeIndex];
-  let s = selectedStake === "ALL" ? Math.max(0, PlayerState.bank) : selectedStake;
+  let s = selectedStakeCost();
   if (s === undefined || s <= 0) return 0;
   
   if (PlayerState.debt > 0 && decreaseDeadline) {
@@ -3071,14 +3078,12 @@ function takeSlotWin() {
   payWin(UIState.pendingWin, moneyText("WON", UIState.pendingWin), UIState.pendingBig);
 }
 function slotAutoSpinCheck() {
-  const creditLimit = getVipCreditLimit();
-  if (SlotState.autoSpin && PlayerState.bank + creditLimit >= stakes[stakeIndex]) {
+  if (SlotState.autoSpin && canCover(selectedStakeCost())) {
     setTimeout(() => { if (UIState.state === "slot") startSlotSpin(); }, hm(500));
   }
 }
 function wheelAutoSpinCheck() {
-  const creditLimit = getVipCreditLimit();
-  if (WheelState.autoSpin && PlayerState.bank + creditLimit >= stakes[stakeIndex]) {
+  if (WheelState.autoSpin && canCover(selectedStakeCost())) {
     setTimeout(() => { if (UIState.state === "wheel") spinWheel(); }, hm(500));
   }
 }
@@ -3692,7 +3697,7 @@ function bjStartDeal(stake) {
 function bjSplit() {
   if (UIState.state !== "blackjack" || !bjActive || bjDealing || bjActive2) return;
   if (bjPlayer.length !== 2 || bjVal(bjPlayer[0]) !== bjVal(bjPlayer[1])) return;
-  if (PlayerState.bank < PlayerState.lastStake) return;
+  if (!canCover(PlayerState.lastStake)) return;
   PlayerState.bank -= PlayerState.lastStake;
   bjSplitStake = PlayerState.lastStake;
   feedJackpotByBet(UIState.state, PlayerState.lastStake);
@@ -3730,7 +3735,7 @@ function bjDoubleDown() {
   const currentHand = bjCurrentHand === 1 ? bjPlayer : bjPlayer2;
   const stakeAmount = bjCurrentHand === 1 ? PlayerState.lastStake : bjSplitStake;
   if (currentHand.length !== 2) return;
-  if (PlayerState.bank < stakeAmount) return;
+  if (!canCover(stakeAmount)) return;
   PlayerState.bank -= stakeAmount;
   feedJackpotByBet(UIState.state, stakeAmount);
   if (bjCurrentHand === 1) {
@@ -3904,7 +3909,7 @@ function finishRoulette() { // NOSONAR
 function rouletteAutoSpinCheck() {
   if (!ShopState.upgrades.autoRoulOn || lastRouBets.length === 0) return;
   const totalBet = lastRouBets.reduce((s, b) => s + b.stake, 0);
-  if (PlayerState.bank >= totalBet) {
+  if (canCover(totalBet)) {
     setTimeout(() => {
       if (UIState.state === "roulette" || UIState.state === "rouletteResult") {
          UIState.state = "roulette";
@@ -3919,6 +3924,12 @@ function rouletteAutoSpinCheck() {
              goBust(true);
              return;
            }
+         }
+         if (!canCover(totalBet)) {
+           ShopState.upgrades.autoRoulOn = false;
+           updateStakes();
+           render();
+           return;
          }
          PlayerState.bank -= totalBet;
          feedJackpotByBet("roulette", totalBet);
