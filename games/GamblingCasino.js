@@ -1959,6 +1959,8 @@ const STAKE_TIERS = [
   [30000, [1000, 2500, 5000, 7500, 10000, 15000, 20000, 25000, "ALL"]], 
   [Infinity, [2500, 5000, 10000, 15000, 20000, 30000, 40000, 50000, "ALL"]]
 ];
+const VIP_STAKE_MULTIPLIERS = [1, 5, 10, 25, 50, 100];
+const VIP_CREDIT_LIMITS = [0, 50000, 250000, 1000000, 5000000, 25000000];
 const SLOT_TRIPLES = [[seven, "JACKPOT", 0, 3, true], [bar, "BAR", 20, 2, true],
   [bell, "BELL", 12, 2, true], [lemon, "WIN", 4, 1, false], [cherry, "WIN", 2, 1, false]];
 function randInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
@@ -2037,18 +2039,17 @@ function updateStakes() {
   let creditLimit = 0;
   if (PlayerState.vipMode) {
     const activeTier = Math.max(1, PlayerState.vipTier);
-    const multipliers = [1, 5, 10, 25, 50, 100];
-    const limits = [0, 50000, 250000, 1000000, 5000000, 25000000];
-    const mult = multipliers[activeTier];
-    creditLimit = limits[activeTier];
+    const mult = VIP_STAKE_MULTIPLIERS[activeTier];
+    creditLimit = VIP_CREDIT_LIMITS[activeTier];
     rawStakes = rawStakes.map(s => s === "ALL" ? s : s * mult);
   }
-  stakes = rawStakes.filter(s => s === "ALL" || s <= (PlayerState.bank < 0 ? Infinity : PlayerState.bank + creditLimit));
+  const spendLimit = PlayerState.bank + creditLimit;
+  stakes = rawStakes.filter(s => s === "ALL" || s <= spendLimit);
   if (oldStake === "ALL") {
     stakeIndex = stakes.length - 1;
     return;
   }
-  const target = Math.min(oldStake, PlayerState.bank);
+  const target = Math.min(oldStake, spendLimit);
   const exact = stakes.indexOf(target);
   if (exact >= 0) {
     stakeIndex = exact;
@@ -2079,8 +2080,7 @@ function multLabel(mult) { return "" + mult; }
 function sharkMult() { return PlayerState.sharkDealType === 2 && PlayerState.sharkDeadline > 0 ? 5 : 1; }
 function getVipCreditLimit() {
   if (!PlayerState.vipMode) return 0;
-  const limits = [0, 10000, 50000, 250000, 1000000, 5000000];
-  return limits[Math.max(1, PlayerState.vipTier)];
+  return VIP_CREDIT_LIMITS[Math.max(1, PlayerState.vipTier)];
 }
 const TEXT_W = 20;
 function centerText(text) { return Math.max(0, Math.floor((TEXT_W - text.length) / 2)); }
@@ -2929,13 +2929,8 @@ function pressure() {
 }
 // eslint-disable-next-line sonarjs/cognitive-complexity
 function spendStake(decreaseDeadline = true) { // NOSONAR
-  let s;
-  if (PlayerState.lastStakeAllIn) {
-    s = Math.max(0, PlayerState.bank);
-  } else {
-    s = stakes[stakeIndex];
-    if (s === "ALL") s = Math.max(0, PlayerState.bank);
-  }
+  const selectedStake = stakes[stakeIndex];
+  let s = selectedStake === "ALL" ? Math.max(0, PlayerState.bank) : selectedStake;
   if (s === undefined || s <= 0) return 0;
   
   if (PlayerState.debt > 0 && decreaseDeadline) {
@@ -2962,7 +2957,7 @@ function spendStake(decreaseDeadline = true) { // NOSONAR
   feedJackpotByBet(UIState.state, s);
   
   PlayerState.lastStake = s;
-  PlayerState.lastStakeAllIn = stakes[stakeIndex] === "ALL";
+  PlayerState.lastStakeAllIn = selectedStake === "ALL";
   return s;
 }
 function slotSymbol() {
