@@ -50,11 +50,67 @@ export function transformAndThrowErrors(code: string, engineAPIKeys: string[], r
 	}
 }
 
-export function _performSyntaxCheck(code: string): { error: NormalizedError | null, cleanup: () => void } {
+export function checkMetadata(code: string): NormalizedError[] {
+    const warnings: NormalizedError[] = [];
+    const blockMatch = code.match(/^\s*\/\*([\s\S]*?)\*\//);
+    if (!blockMatch) {
+        warnings.push({
+            raw: "Missing metadata block",
+            description: "Missing metadata block.\n\nYour game should start with a /* ... */ comment block containing @title, @author, etc.",
+            severity: "warning",
+            line: 1,
+            column: 1
+        });
+        return warnings;
+    }
+
+    const block = blockMatch[1]!;
+    
+    const titleMatch = block.match(/@title:\s*(.*)/);
+    if (!titleMatch || !titleMatch[1]!.trim()) {
+        warnings.push({ raw: "Missing @title", description: "Missing @title.\n\nPlease add a @title: to your metadata.", severity: "warning", line: 1, column: 1 });
+    } else if (titleMatch[1]!.trim() === "Change Me") {
+        warnings.push({ raw: "Boilerplate @title", description: "Boilerplate @title.\n\nPlease change the @title from 'Change Me' to your game's name.", severity: "warning", line: 1, column: 1 });
+    }
+
+    const authorMatch = block.match(/@author:\s*(.*)/);
+    if (!authorMatch || !authorMatch[1]!.trim()) {
+        warnings.push({ raw: "Missing @author", description: "Missing @author.\n\nPlease add an @author: to your metadata.", severity: "warning", line: 1, column: 1 });
+    } else if (authorMatch[1]!.trim() === "Change Me") {
+        warnings.push({ raw: "Boilerplate @author", description: "Boilerplate @author.\n\nPlease change the @author from 'Change Me' to your name.", severity: "warning", line: 1, column: 1 });
+    }
+
+    const tagsMatch = block.match(/@tags:\s*\[(.*)\]/);
+    if (!tagsMatch || !tagsMatch[1]!.trim()) {
+        warnings.push({ raw: "Missing @tags", description: "Missing @tags.\n\nPlease add at least one tag in @tags: [].", severity: "warning", line: 1, column: 1 });
+    } else if (tagsMatch[1]!.includes("'tag1', 'tag2'")) {
+        warnings.push({ raw: "Boilerplate @tags", description: "Boilerplate @tags.\n\nPlease change the @tags from ['tag1', 'tag2'] to relevant tags.", severity: "warning", line: 1, column: 1 });
+    }
+
+    const addedOnMatch = block.match(/@addedOn:\s*(.*)/);
+    if (!addedOnMatch || !addedOnMatch[1]!.trim()) {
+        warnings.push({ raw: "Missing @addedOn", description: "Missing @addedOn.\n\nPlease add an @addedOn: date.", severity: "warning", line: 1, column: 1 });
+    } else {
+        const dateStr = addedOnMatch[1]!.trim();
+        if (dateStr === "2025-00-00" || dateStr === "2026-06-14") {
+            warnings.push({ raw: "Boilerplate @addedOn", description: "Boilerplate @addedOn.\n\nPlease update the @addedOn date from the boilerplate to today's date (YYYY-MM-DD).", severity: "warning", line: 1, column: 1 });
+        } else if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+            warnings.push({ raw: "Invalid @addedOn format", description: "Invalid @addedOn format.\n\nThe @addedOn date should be in YYYY-MM-DD format.", severity: "warning", line: 1, column: 1 });
+        }
+    }
+
+    return warnings;
+}
+
+export function _performSyntaxCheck(code: string): { error: NormalizedError | null, warnings: NormalizedError[], cleanup: () => void } {
 	const game = baseEngine();
 
 	const engineAPIKeys = Object.keys(game.api);
-	return { error: transformAndThrowErrors(code, engineAPIKeys, () => {}), cleanup: () => void 0 };
+	return { 
+		error: transformAndThrowErrors(code, engineAPIKeys, () => {}), 
+		warnings: checkMetadata(code),
+		cleanup: () => void 0 
+	};
 }
 
 export function runGame(code: string, canvas: HTMLCanvasElement, onPageError: (error: NormalizedError) => void): RunResult | undefined {

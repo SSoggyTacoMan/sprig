@@ -44,7 +44,7 @@ function parseError(err: NormalizedError): ParsedProblem {
 	const blankIdx = lines.findIndex((l, i) => i > 0 && l.trim() === "");
 	const codeFrame = blankIdx !== -1 ? lines.slice(blankIdx + 1).join("\n").trim() : "";
 
-	return { severity: "error", message, source: "compiler", line, col, codeFrame };
+	return { severity: err.severity || "error", message, source: "compiler", line, col, codeFrame };
 }
 
 // ─── Problem row ───────────────────────────────────────────────────────────────

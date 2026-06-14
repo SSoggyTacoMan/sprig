@@ -18,6 +18,7 @@ export interface NormalizedError {
 	description: string
 	line?: number | null
 	column?: number | null
+	severity?: "error" | "warning"
 }
 
 // Editor types

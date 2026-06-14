@@ -47,14 +47,20 @@ let screenShakeSignal: Signal<number> | null = null;
 const performSyntaxCheck = (forceOpen = false) => {
 	const code = monacoEditor.value?.getValue() ?? "";
 	const res = _performSyntaxCheck(code);
+	
+	let newLog: NormalizedError[] = [];
 	if (res.error) {
-		errorLog.value = [];
-		errorLog.value = [res.error];
+		newLog.push(res.error);
 		if (forceOpen) showProblemsPanel.value = true;
-	} else {
-		// clear old syntax errors when code is clean
-		if (errorLog.value.length > 0) errorLog.value = [];
 	}
+	
+	if (res.warnings && res.warnings.length > 0) {
+		newLog.push(...res.warnings);
+		// Optionally force open on warnings too, but let's stick to errors for force open
+		// if (forceOpen && !res.error) showProblemsPanel.value = true;
+	}
+
+	errorLog.value = newLog;
 }
 
 export const onRun = async () => {
