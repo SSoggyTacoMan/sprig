@@ -641,28 +641,30 @@ export default function Editor({ persistenceState: persistenceStateProp, cookies
 		return () => window.removeEventListener("keydown", handler);
 	}, []);
 
-	let initialCode = "";
+	let initialCode = defaultExampleCode;
 	let gameId = '';
 	if (
 		persistenceState.value.kind === PersistenceStateKind.PERSISTED &&
 		persistenceState.value.game !== "LOADING"
 	){
-		initialCode = persistenceState.value.game.code;
+		initialCode = persistenceState.value.game.code || defaultExampleCode;
 		gameId = persistenceState.value.game?.id ?? '';
 
 	}
 	else if (persistenceState.value.kind === PersistenceStateKind.SHARED)
-		initialCode = persistenceState.value.code;
+		initialCode = persistenceState.value.code || defaultExampleCode;
 	else if (review?.code)
-		initialCode = review.code;
+		initialCode = review.code || defaultExampleCode;
 	else if (persistenceState.value.kind === PersistenceStateKind.IN_MEMORY) {
 		const mem = localStorage.getItem("sprigMemory");
-		initialCode = (mem && mem.trim().length > 0) ? mem : defaultExampleCode;
+		if (mem && mem.trim().length > 0) {
+			initialCode = mem;
+		}
 	}
 	else if (isNewSaveStrat.value && persistenceState.value.kind === PersistenceStateKind.COLLAB){
 		if(typeof persistenceState.value.game !== 'string')
 			// @ts-ignore
-			initialCode = persistenceState.value.game.game.code;
+			initialCode = persistenceState.value.game.game.code || defaultExampleCode;
 	}
 	
 	// Firefox has weird tab restoring logic. When you, for example, Ctrl-Shift-T, it opens

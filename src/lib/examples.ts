@@ -1,6 +1,10 @@
 export const defaultExampleCode = `
 /*
+First time? Check out the tutorial game:
+https://sprig.hackclub.com/gallery/getting_started
+
 @title: Change Me
+@description: 
 @author: Change Me
 @tags: ['tag1', 'tag2']
 @addedOn: 2026-06-14
