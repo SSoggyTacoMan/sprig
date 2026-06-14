@@ -36,8 +36,11 @@ const isMobile = mobileUserAgent(Astro.request.headers.get('user-agent') ?? '')
 
 const review = reviewMode ? await getReviewPayload(requestUrl) : undefined
 
-// If no session and not in review mode, redirect to login
-if (!session?.session.full && !reviewMode && import.meta.env.PROD) {
+const isVercelPreview = process.env.VERCEL_ENV === 'preview' || import.meta.env.VERCEL_ENV === 'preview'
+const bypassLogin = requestUrl.searchParams.has('preview') || isVercelPreview
+
+// If no session and not in review mode or preview, redirect to login
+if (!session?.session.full && !reviewMode && import.meta.env.PROD && !bypassLogin) {
 	return Astro.redirect('/login', 302)
 }
 
