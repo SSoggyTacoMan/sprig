@@ -7,7 +7,7 @@
 	"scripts": {
 		"dev": "cross-env NODE_OPTIONS=\"--require ./preload.cjs\" astro dev",
 		"start": "cross-env NODE_OPTIONS=\"--require ./preload.cjs\" astro dev",
-		"build": "cross-env NODE_OPTIONS=\"--require ./preload.cjs\" astro build",
+		"build": "cross-env NODE_OPTIONS=\"--max-old-space-size=6144 --require ./preload.cjs\" astro build",
 		"test": "bun run ./tests/sprigfuzzy.js",
 		"test:unit": "cross-env PUBLIC_MAX_ITERATIONS=2000 PUBLIC_MAX_LOOP_TIME_MS=1500 vitest"
 	},
