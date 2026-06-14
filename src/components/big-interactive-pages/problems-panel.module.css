@@ -162,10 +162,26 @@
 }
 
 .summary {
-	display: none;
+	display: flex;
+	align-items: center;
+	gap: 16px;
+	padding: 6px 20px;
+	font-size: 12px;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+	background: rgba(0, 0, 0, 0.1);
 }
-.summaryError { display: none; }
-.summaryWarn { display: none; }
+.summaryError {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	color: #cccccc;
+}
+.summaryWarn {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	color: #cccccc;
+}
 
 .list {
 	display: flex;
@@ -196,9 +212,19 @@
 }
 
 .chevron {
-	display: none; 
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	visibility: hidden;
+	width: 16px;
+	height: 16px;
+	font-size: 16px;
+	color: inherit;
+	opacity: 0.8;
 }
-.chevronVisible { display: none; }
+.chevronVisible {
+	visibility: visible;
+}
 
 .iconError {
 	display: flex;
@@ -277,6 +303,16 @@
 :global(.theme-light) .badge {
 	background: rgba(0,0,0,0.08);
 	color: #333333;
+}
+
+:global(.theme-light) .summary {
+	border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+	background: rgba(0, 0, 0, 0.02);
+}
+
+:global(.theme-light) .summaryError,
+:global(.theme-light) .summaryWarn {
+	color: #616161;
 }
 
 :global(.theme-light) .filterWrap:focus-within {

@@ -197,7 +197,7 @@ export default function ProblemsPanel({ persistenceState }: { persistenceState: 
 							)}
 						</div>
 
-						{/* problem list — no file header since it's always one file */}
+						{/* problem list */}
 						<div className={styles.list}>
 							{filtered.map((p, i) => (
 								<ProblemRow key={`${i}-${p.line}-${p.col}`} p={p} idx={i} onJump={jumpTo} />
