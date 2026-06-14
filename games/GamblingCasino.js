@@ -2661,7 +2661,7 @@ function drawBingoEmpty() {
 }
 
 function drawBingoMenu() {
-  txt("BALLS LEFT " + (40 - BingoState.balls.length), 0, 1, color`2`);
+  txt("BALLS LEFT " + Math.max(0, 40 - BingoState.balls.length), 0, 1, color`2`);
   if (BingoState.done) {
     txtR("J NEW", 1, color`7`);
     txtR("K BACK", 3, color`9`);
@@ -3080,6 +3080,17 @@ function wheelAutoSpinCheck() {
   if (WheelState.autoSpin && PlayerState.bank + creditLimit >= stakes[stakeIndex]) {
     setTimeout(() => { if (UIState.state === "wheel") spinWheel(); }, hm(500));
   }
+}
+function toggleResultAuto() {
+  if (UIState.lastGame === "slot" && ShopState.upgrades.autoSpin) {
+    SlotState.autoSpin = !SlotState.autoSpin;
+  } else if (UIState.lastGame === "wheel" && ShopState.upgrades.autoSpinWheel) {
+    WheelState.autoSpin = !WheelState.autoSpin;
+  } else {
+    return;
+  }
+  playSound(tickSfx);
+  render();
 }
 function riskSlotWin() {
   if (UIState.state !== "slotChoice") return;
@@ -3867,9 +3878,16 @@ function finishRoulette() { // NOSONAR
       if (mult > maxMult) maxMult = mult;
     }
   }
+  PlayerState.lastStake = totalBet;
   if (totalWin > 0) {
-    payWin(totalWin, "WIN " + fmt(totalWin - totalBet), maxMult >= 36);
+    PlayerState.bank += totalWin;
+    feedJackpotByWin(totalWin, maxMult >= 36);
     PlayerState.heat += maxMult >= 36 ? 2 : 1; clampHeat();
+    rouMsg = "WIN " + fmt(totalWin - totalBet);
+    playSound(maxMult >= 36 ? bigWinSfx : winSfx, maxMult >= 36 ? 1200 : 900);
+    UIState.state = "rouletteResult";
+    updateStakes();
+    render();
   } else {
     PlayerState.heat -= 1; clampHeat();
     rouMsg = "LOST " + fmt(totalBet);
@@ -4091,6 +4109,7 @@ function newGame() {
   clearGameTimers();
   clearTransition();
   stopFx();
+  invalidateShopCache();
   PlayerState.bank = 150;
   resetJackpot();
   PlayerState.debt = 0;
@@ -4113,6 +4132,9 @@ function newGame() {
   SlotState.autoSpin = false;
   WheelState.autoSpin = false;
   ShopState.upgrades.autoRoulOn = false;
+  ShopState.cursor = 0;
+  ShopState.msg = "";
+  ShopState.page = 0;
   stakeIndex = 1;
   updateStakes();
   UIState.state = "lobby";
@@ -4152,6 +4174,8 @@ function newGame() {
   rouSpinFrame = 0;
   rouResult = 0;
   rouMsg = "";
+  rouBets = [];
+  lastRouBets = [];
   resetBingo();
   setMap(blankMap);
   playSound(betSfx);
@@ -4265,9 +4289,9 @@ const InputStateHandlers = {
   loan_shark: {
     j: () => { 
       if (PlayerState.offeredDeal === 1) {
-        PlayerState.bank += 100000; PlayerState.debt = 150000; PlayerState.sharkDeadline = 5; PlayerState.sharkDealType = 1; PlayerState.vipMode = true; UIState.state = "lobby"; updateStakes(); playSound(betSfx); render(); startBgm();
+        PlayerState.bank += 100000; PlayerState.debt = 150000; PlayerState.sharkDeadline = 5; PlayerState.sharkDealType = 1; PlayerState.vipMode = true; invalidateShopCache(); UIState.state = "lobby"; updateStakes(); playSound(betSfx); render(); startBgm();
       } else if (PlayerState.offeredDeal === 2) {
-        PlayerState.bank += 1000; PlayerState.debt = 10000; PlayerState.sharkDeadline = 10; PlayerState.sharkDealType = 2; UIState.state = "lobby"; updateStakes(); playSound(betSfx); render(); startBgm();
+        PlayerState.bank += 1000; PlayerState.debt = 10000; PlayerState.sharkDeadline = 10; PlayerState.sharkDealType = 2; invalidateShopCache(); UIState.state = "lobby"; updateStakes(); playSound(betSfx); render(); startBgm();
       } else {
         RRState.bullet = randInt(1, 6); RRState.pulls = 0; RRState.winnings = 0; UIState.state = "russian_roulette"; playTune(loseSfx); render();
       }
@@ -4356,10 +4380,10 @@ const InputStateHandlers = {
     w: () => { if (ShopState.upgrades.autoSpin) { SlotState.autoSpin = !SlotState.autoSpin; playSound(tickSfx); render(); } }
   },
   result: {
-    w: () => { if (ShopState.upgrades.autoSpin) { SlotState.autoSpin = !SlotState.autoSpin; playSound(tickSfx); render(); } }
+    w: () => toggleResultAuto()
   },
   loss: {
-    w: () => { if (ShopState.upgrades.autoSpin) { SlotState.autoSpin = !SlotState.autoSpin; playSound(tickSfx); render(); } }
+    w: () => toggleResultAuto()
   },
   card: {
     a: () => prevStake(),
