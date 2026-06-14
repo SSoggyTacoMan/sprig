@@ -2549,7 +2549,7 @@ function drawBlackjackMenu() {
   } else if (bjActive) {
     txtR("J HIT", 7, color`7`);
     txtR("L STAND", 8, color`9`);
-    if (bjPlayer.length === 2 && !bjActive2 && PlayerState.bank >= PlayerState.lastStake) {
+    if (bjPlayer.length === 2 && !bjActive2 && canCover(PlayerState.lastStake)) {
       txtR("I DOUBLE", 9, color`H`);
       if (bjVal(bjPlayer[0]) === bjVal(bjPlayer[1])) {
         txt("W SPLIT", 0, 9, color`H`);
@@ -3847,6 +3847,9 @@ function spinRoulette() {
   if (rouBets.length > 0) {
     lastRouBets = [...rouBets];
   }
+  startRouletteSpin();
+}
+function startRouletteSpin() {
   rouMsg = "";
   rouSpinFrame = 0;
   UIState.state = "rouletteSpin";
@@ -3935,7 +3938,7 @@ function rouletteAutoSpinCheck() {
          feedJackpotByBet("roulette", totalBet);
          PlayerState.lastStake = totalBet;
          rouBets = [...lastRouBets];
-         spinRoulette();
+         startRouletteSpin();
       }
     }, 1200);
   } else {
@@ -4253,6 +4256,7 @@ const InputStateHandlers = {
           PlayerState.bank -= PlayerState.debt;
           PlayerState.debt = 0;
           PlayerState.sharkDeadline = 0;
+          updateStakes();
           ShopState.msg = "DEBT CLEARED!";
           playSound(bigWinSfx);
           invalidateShopCache();
@@ -4288,6 +4292,7 @@ const InputStateHandlers = {
           if (item.type === "insurance") ShopState.upgrades.insurance = true;
           if (item.type === "hyperDrive") ShopState.upgrades.hyperDrive = true;
           if (item.type === "bingoHacker") ShopState.upgrades.bingoHacker = true;
+          updateStakes();
           ShopState.msg = "PURCHASED!";
           playSound(winSfx);
         } else {
