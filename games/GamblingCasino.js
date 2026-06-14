@@ -1869,8 +1869,8 @@ let hyperMode = false;
 function getShopItems() {
   if (ShopState.cachedItems) return ShopState.cachedItems;
   const items = [
-    { name: "AUTO-SLOT", cost: 5000, type: "auto", getOwned: () => ShopState.upgrades.autoSpin },
-    { name: "AUTO-WHEEL", cost: 7500, type: "autoWheel", getOwned: () => ShopState.upgrades.autoSpinWheel }
+    { name: "AUTO SLOT", cost: 5000, type: "auto", getOwned: () => ShopState.upgrades.autoSpin },
+    { name: "AUTO WHEEL", cost: 7500, type: "autoWheel", getOwned: () => ShopState.upgrades.autoSpinWheel }
   ];
   if (PlayerState.vipTier < 5) {
     const costs = [50000, 200000, 1000000, 5000000, 25000000];
@@ -1883,7 +1883,7 @@ function getShopItems() {
     { name: "LUCKY COIN", cost: 100000, type: "luckyCoin", getOwned: () => ShopState.upgrades.luckyCoin },
     { name: "CARD SHARK", cost: 150000, type: "cardShark", getOwned: () => ShopState.upgrades.cardShark },
     { name: "SPARK MAGNET", cost: 250000, type: "sparkMagnet", getOwned: () => ShopState.upgrades.sparkMagnet },
-    { name: "AUTO-ROULETTE", cost: 50000, type: "autoRoul", getOwned: () => ShopState.upgrades.autoRoul },
+    { name: "AUTO ROULETTE", cost: 50000, type: "autoRoul", getOwned: () => ShopState.upgrades.autoRoul },
     { name: "INSURANCE", cost: 500000, type: "insurance", getOwned: () => ShopState.upgrades.insurance },
     { name: "HYPER DRIVE", cost: 1000000, type: "hyperDrive", getOwned: () => ShopState.upgrades.hyperDrive },
     { name: "BINGO HACKER", cost: 2500000, type: "bingoHacker", getOwned: () => ShopState.upgrades.bingoHacker },
@@ -2065,11 +2065,11 @@ function fmt(n) {
 function moneyText(label, returnedAmount) {
   const profit = returnedAmount - PlayerState.lastStake;
   if (profit > 0) return label + " +" + fmt(profit);
-  if (profit < 0) return label + " -" + fmt(-profit);
+  if (profit < 0) return label + " DOWN " + fmt(-profit);
   return label + " +" + fmt(0);
 }
 function lossText(label) {
-  if (label === "LOSS") return "LOST -" + fmt(PlayerState.lastStake);
+  if (label === "LOSS") return "LOST " + fmt(PlayerState.lastStake);
   if (label === "RISK") return "RISK LOST";
   if (label === "NO TIE") return "NO TIE";
   if (label === "TIE") return "TIE LOSS";
@@ -2562,7 +2562,13 @@ function drawBlackjack() {
   drawBlackjackHands();
   drawBlackjackMenu();
 }
-function rouBetName() { const t = rouTypes[rouTypeIndex]; return t + (t === "NUM" ? " " + (rouPick === 37 ? "00" : rouPick) : ""); // NOSONAR
+function rouTypeDisplay(t) {
+  if (t === "1-12") return "1TO12";
+  if (t === "13-24") return "13TO24";
+  if (t === "25-36") return "25TO36";
+  return t;
+}
+function rouBetName() { const t = rouTypes[rouTypeIndex]; return rouTypeDisplay(t) + (t === "NUM" ? " " + (rouPick === 37 ? "00" : rouPick) : ""); // NOSONAR
 }
 function rouOption(name, x, y, idx) {
   txt((rouTypeIndex === idx ? ">" : " ") + name, x, y, rouTypeIndex === idx ? color`6` : color`7`);
@@ -2576,8 +2582,8 @@ function drawRouletteOptions() {
   rouOption("RED", 6, 5, 0);  rouOption("BLACK", 12, 5, 1);
   rouOption("ODD", 6, 7, 2);  rouOption("EVEN", 12, 7, 3);
   rouOption("LOW", 6, 9, 4);  rouOption("HIGH", 12, 9, 5);
-  rouOption("1-12", 6, 11, 6); rouOption("13-24", 12, 11, 7);
-  rouOption("25-36", 6, 13, 8);
+  rouOption("1TO12", 6, 11, 6); rouOption("13TO24", 12, 11, 7);
+  rouOption("25TO36", 6, 13, 8);
   
   txt((rouTypeIndex === 9 ? ">" : " ") + "NUM", 12, 13, rouTypeIndex === 9 ? color`6` : color`7`);
   if (rouTypeIndex === 9) txt("W/S " + (rouPick === 37 ? "00" : rouPick), 12, 14, color`H`);
@@ -2667,7 +2673,7 @@ function drawBingoMenu() {
     txtR("K BACK", 3, color`9`);
   } else if (BingoState.balls.length >= 40) {
     const cost = Math.max(3, Math.floor(PlayerState.lastStake * 0.2));
-    txtR("L EXTRA -" + cost, 1, color`7`);
+    txtR("L EXTRA " + cost, 1, color`7`);
     txtR("J GIVE UP", 2, color`7`);
     txtR("K BACK", 3, color`9`);
   } else {
