@@ -189,9 +189,17 @@ export default function MonacoComponent(props: MonacoProps) {
 								{
 									label: 'sprite',
 									kind: monaco.languages.CompletionItemKind.Snippet,
-									insertText: "const ${1:player} = {\n\ttype: '${2:player}',\n\tx: ${3:0},\n\ty: ${4:0}\n};\naddSprite(${1:player}.x, ${1:player}.y, ${1:player}.type);",
+									insertText: "const player = {\n\ttype: 'player',\n\tx: 0,\n\ty: 0\n};\naddSprite(player.x, player.y, player.type);",
 									insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
 									documentation: 'Boilerplate for a new Sprig sprite object',
+									range
+								},
+								{
+									label: 'metadata',
+									kind: monaco.languages.CompletionItemKind.Snippet,
+									insertText: "/*\n@title: ${1:Game Title}\n@author: ${2:Your Name}\n@tags: ${3:tag1, tag2}\n@addedOn: ${4:YYYY-MM-DD}\n*/\n$0",
+									insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+									documentation: 'Metadata header for your Sprig game',
 									range
 								},
 								{
