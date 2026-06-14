@@ -2547,11 +2547,13 @@ function drawBlackjackMenu() {
   } else if (bjDealing) {
     txtR("DEALING", 7, color`6`);
   } else if (bjActive) {
+    const currentHand = bjCurrentHand === 1 ? bjPlayer : bjPlayer2;
+    const stakeAmount = bjCurrentHand === 1 ? PlayerState.lastStake : bjSplitStake;
     txtR("J HIT", 7, color`7`);
     txtR("L STAND", 8, color`9`);
-    if (bjPlayer.length === 2 && !bjActive2 && canCover(PlayerState.lastStake)) {
+    if (currentHand.length === 2 && canCover(stakeAmount)) {
       txtR("I DOUBLE", 9, color`H`);
-      if (bjVal(bjPlayer[0]) === bjVal(bjPlayer[1])) {
+      if (!bjActive2 && bjVal(bjPlayer[0]) === bjVal(bjPlayer[1])) {
         txt("W SPLIT", 0, 9, color`H`);
       }
     }
