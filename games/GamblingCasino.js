@@ -4195,10 +4195,10 @@ const InputStateHandlers = {
   lobby: {
     a: () => prevStake(),
     d: () => nextStake(),
-    j: () => UIState.moreMenu ? openBlackjack() : openSlot(),
-    i: () => UIState.moreMenu ? openRoulette() : startCard(),
+    j: () => UIState.moreMenu ? openSlot() : openBlackjack(),
+    i: () => UIState.moreMenu ? startCard() : openRoulette(),
     k: () => { UIState.moreMenu = !UIState.moreMenu; playSound(tickSfx); render(); },
-    l: () => UIState.moreMenu ? openBingo() : startWheel(),
+    l: () => UIState.moreMenu ? startWheel() : openBingo(),
     h: () => { if (PlayerState.vipTier > 0) { PlayerState.vipMode = !PlayerState.vipMode; clampHeat(); updateStakes(); playTune(tickSfx); render(); } },
     w: () => { if (ShopState.upgrades.hyperDrive) { hyperMode = !hyperMode; playSound(tickSfx); render(); } },
     s: () => { UIState.state = "shop"; ShopState.msg = ""; ShopState.cursor = 0; playSound(tickSfx); render(); }
