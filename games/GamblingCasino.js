@@ -4182,6 +4182,7 @@ function newGame() {
   UIState.pendingText = "";
   UIState.pendingBig = false;
   UIState.justRisked = false;
+  UIState.sawCasinoNotif = false;
   UIState.moreMenu = false;
   resetBlackjack();
   rouTypeIndex = 0;
@@ -4374,10 +4375,10 @@ const InputStateHandlers = {
     }
   },
   casino_notif: {
-    j: () => { UIState.state = "lobby"; playSound(tickSfx); render(); startBgm(); }
+    j: () => { UIState.state = "lobby"; updateStakes(); playSound(tickSfx); render(); startBgm(); }
   },
   insurance_notif: {
-    j: () => { UIState.state = "lobby"; playSound(tickSfx); render(); startBgm(); }
+    j: () => { UIState.state = "lobby"; updateStakes(); playSound(tickSfx); render(); startBgm(); }
   },
   rr_animating: {},
   win_credits: {},
