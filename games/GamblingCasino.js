@@ -2604,6 +2604,7 @@ function drawRoulette() {
   txtC("ROULETTE", 1, color`3`);
   drawRouletteWheel(0, 2, false);
   if (rouBets.length > 0) txt("BETS " + rouBets.length, 6, 3, color`9`);
+  if (rouMsg) txtC(rouMsg, 4, color`3`);
   
   drawRouletteOptions();
   
@@ -4449,7 +4450,15 @@ const InputStateHandlers = {
     s: () => changeRouletteNumber(1),
     j: () => spinRoulette(),
     i: () => cycleRouletteType(),
-    k: () => goLobby(),
+    k: () => {
+      if (rouBets.length > 0) {
+        rouMsg = "SPIN FIRST";
+        playSound(bustSfx);
+        render();
+      } else {
+        goLobby();
+      }
+    },
     l: () => {
       const stake = spendStake(false);
       if (stake > 0) {
