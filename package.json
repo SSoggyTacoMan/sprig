@@ -65,9 +65,5 @@
 		"@types/w3c-web-serial": "^1.0.8",
 		"typescript": "5.9.3",
 		"vitest-canvas-mock": "^1.1.4"
-	},
-	"overrides": {
-		"react-icons": {
-		}
 	}
 }
