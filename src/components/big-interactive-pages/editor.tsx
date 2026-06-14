@@ -29,7 +29,6 @@ import { runGame, _performSyntaxCheck } from "../../lib/engine";
 import DraftWarningModal from "../popups-etc/draft-warning";
 import { debounce } from "throttle-debounce";
 import Help from "../popups-etc/help";
-// import { collapseRanges } from "../../lib/codemirror/util";
 import { defaultExampleCode } from "../../lib/examples";
 import MigrateToast from "../popups-etc/migrate-toast";
 import { nanoid } from "nanoid";

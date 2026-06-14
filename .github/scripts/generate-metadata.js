@@ -19,6 +19,8 @@ const walk = () => {
 	return files.filter((file) => file.endsWith(".js"));
 };
 
+con
+
 walk().forEach((gameFile) => {
 	process.stdout.write(`[${gameFile}] Looking for metadata...`);
 

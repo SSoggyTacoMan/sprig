@@ -1,0 +1,85 @@
+export const VALID_INPUTS: readonly [ "w", "s", "a", "d", "i", "j", "k", "l" ];
+export type InputKey = typeof VALID_INPUTS[number];
+
+export interface AddTextOptions {
+	x?: number;
+	y?: number;
+	color?: string;
+}
+
+export declare class SpriteType {
+	type: string;
+	x: number;
+	y: number;
+	readonly dx: number;
+	readonly dy: number;
+	remove(): void;
+}
+
+export type Rgba = [number, number, number, number];
+
+export interface TextElement {
+	x: number;
+	y: number;
+	color: Rgba;
+	content: string;
+}
+
+export interface GameState {
+	legend: [string, string][];
+	texts: TextElement[];
+	dimensions: {
+		width: number;
+		height: number;
+	};
+	sprites: SpriteType[];
+	solids: string[];
+	pushable: Record<string, string[]>;
+	background: string | null;
+}
+
+export interface PlayTuneRes {
+	end(): void;
+	isPlaying(): boolean;
+}
+
+export const tones: Record<string, number>;
+export const instruments: readonly [ "sine", "triangle", "square", "sawtooth" ];
+export type InstrumentType = typeof instruments[number];
+export const instrumentKey: Record<string, InstrumentType>;
+export const reverseInstrumentKey: Record<InstrumentType, string>;
+
+export type Tune = [number, ...(InstrumentType | number | string)[]][];
+
+declare global {
+	function map(template: TemplateStringsArray, ...params: string[]): string;
+	function bitmap(template: TemplateStringsArray, ...params: string[]): string;
+	function color(template: TemplateStringsArray, ...params: string[]): string;
+	function tune(template: TemplateStringsArray, ...params: string[]): string;
+
+	function setMap(string: string): void;
+	function addText(str: string, opts?: AddTextOptions): void;
+	function clearText(): void;
+	function addSprite(x: number, y: number, type: string): void;
+	function getGrid(): SpriteType[][];
+	function getTile(x: number, y: number): SpriteType[];
+	function tilesWith(...matchingTypes: string[]): SpriteType[][];
+	function clearTile(x: number, y: number): void;
+	function setSolids(types: string[]): void;
+	function setPushables(map: Record<string, string[]>): void;
+	function setBackground(type: string): void;
+	function getFirst(type: string): SpriteType | undefined;
+	function getAll(type: string): SpriteType[];
+	function width(): number;
+	function height(): number;
+
+	function setLegend(...bitmaps: [string, string][]): void;
+	function onInput(key: InputKey, fn: () => void): void;
+	function afterInput(fn: () => void): void;
+	function playTune(text: string, n?: number): PlayTuneRes;
+
+	function setTimeout(fn: TimerHandler, ms: number): number;
+	function setInterval(fn: TimerHandler, ms: number): number;
+	function clearTimeout(id: number): void;
+	function clearInterval(id: number): void;
+}

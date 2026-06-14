@@ -56,58 +56,17 @@ export default defineConfig({
       host: true, // Allow access from non-localhost domains
       cors: true, // Allow CORS (optional)
     },
-		optimizeDeps: {
-			exclude: ['https'],
-			esbuildOptions: {
-				alias: {
-					react: preactCompat,
-					'react-dom': preactCompat,
-					'react-dom/test-utils': preactTestUtils,
-					'react/jsx-runtime': preactCompatJsx
-				}
+		resolve: {
+			alias: {
+				react: 'preact/compat',
+				'react-dom': 'preact/compat',
+				'react/jsx-runtime': 'preact/jsx-runtime'
 			}
 		},
-		plugins: [
-			{
-				name: 'force-preact-compat-env-aliases',
-				configEnvironment(name, options) {
-					options.resolve = options.resolve || {};
-					
-					const compatAliases = [
-						{ find: /^react$/, replacement: preactCompat },
-						{ find: /^react-dom$/, replacement: preactCompat },
-						{ find: /^react-dom\/test-utils$/, replacement: preactTestUtils },
-						{ find: /^react\/jsx-runtime$/, replacement: preactCompatJsx },
-						{ find: 'react', replacement: preactCompat },
-						{ find: 'react-dom', replacement: preactCompat },
-						{ find: 'react-dom/test-utils', replacement: preactTestUtils },
-						{ find: 'react/jsx-runtime', replacement: preactCompatJsx }
-					];
-
-					if (Array.isArray(options.resolve.alias)) {
-						options.resolve.alias = [...compatAliases, ...options.resolve.alias];
-					} else {
-						options.resolve.alias = {
-							...options.resolve.alias,
-							react: preactCompat,
-							'react-dom': preactCompat,
-							'react-dom/test-utils': preactTestUtils,
-							'react/jsx-runtime': preactCompatJsx
-						};
-					}
-
-					options.optimizeDeps = options.optimizeDeps || {};
-					options.optimizeDeps.esbuildOptions = options.optimizeDeps.esbuildOptions || {};
-					options.optimizeDeps.esbuildOptions.alias = {
-						...options.optimizeDeps.esbuildOptions.alias,
-						react: preactCompat,
-						'react-dom': preactCompat,
-						'react-dom/test-utils': preactTestUtils,
-						'react/jsx-runtime': preactCompatJsx,
-					};
-				}
-			}
-		],
+		optimizeDeps: {
+			exclude: ['https', 'react-icons', 'react-icons/io5', 'react-icons/fa', 'react-icons/vsc', 'react-icons/ri'],
+		},
+		plugins: [],
 		ssr: {
 			// If an import is broken in the Vercel deployment, adding it here might fix it!
 			noExternal: [ 'tinykeys', 'y-monaco', 'monaco-editor', 'y-webrtc', 'path-browserify' ]

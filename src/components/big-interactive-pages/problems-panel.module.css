@@ -1,8 +1,3 @@
-/* ═══════════════════════════════════════════════════════
-   Problems Panel — VS Code native style
-   ═══════════════════════════════════════════════════════ */
-
-/* ── Shell ─────────────────────────────────────────────── */
 .panel {
 	display: flex;
 	flex-direction: column;
@@ -14,7 +9,6 @@
 	min-height: 0;
 }
 
-/* ── Header ────────────────────────────────────────────── */
 .header {
 	display: flex;
 	align-items: center;
@@ -46,7 +40,6 @@
 	cursor: pointer;
 }
 
-/* ── Badges ────────────────────────────────────────────── */
 .badge {
 	display: inline-flex;
 	align-items: center;
@@ -69,7 +62,6 @@
 	composes: badge;
 }
 
-/* ── Controls (filter + buttons) ───────────────────────── */
 .controls {
 	display: flex;
 	align-items: center;
@@ -135,7 +127,6 @@
 	color: #ffffff;
 }
 
-/* ── Body/scroll area ──────────────────────────────────── */
 .body {
 	flex: 1;
 	overflow-y: auto;
@@ -152,7 +143,6 @@
 	background: rgba(255,255,255,0.2);
 }
 
-/* ── Empty state ───────────────────────────────────────── */
 .empty {
 	display: flex;
 	align-items: center;
@@ -171,14 +161,12 @@
 	opacity: 0.6;
 }
 
-/* ── Summary strip ─────────────────────────────────────── */
 .summary {
-	display: none; /* Hide summary strip to match VS Code native */
+	display: none;
 }
 .summaryError { display: none; }
 .summaryWarn { display: none; }
 
-/* ── Problem list ──────────────────────────────────────── */
 .list {
 	display: flex;
 	flex-direction: column;
@@ -207,13 +195,11 @@
 	background: rgba(255,255,255,0.04);
 }
 
-/* ── Row contents ──────────────────────────────────────── */
 .chevron {
-	display: none; /* Remove chevron as we don't have file headers */
+	display: none; 
 }
 .chevronVisible { display: none; }
 
-/* severity icons */
 .iconError {
 	display: flex;
 	align-items: center;
@@ -240,7 +226,6 @@
 	font-size: 13px;
 }
 
-/* right-aligned meta */
 .meta {
 	display: flex;
 	align-items: center;
@@ -260,7 +245,6 @@
 	white-space: nowrap;
 }
 
-/* ── Expanded code frame ───────────────────────────────── */
 .codeFrame {
 	margin: 0;
 	padding: 4px 12px 4px 44px;
@@ -275,7 +259,6 @@
 	tab-size: 2;
 }
 
-/* ── Light Theme Overrides ─────────────────────────────── */
 :global(.theme-light) .panel {
 	background: #ffffff;
 	color: #616161;
