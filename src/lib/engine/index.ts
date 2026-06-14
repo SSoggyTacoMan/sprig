@@ -74,7 +74,7 @@ export function checkMetadata(code: string): NormalizedError[] {
 
     function getMetadataValue(key: string): { value: string, line: number } | null {
         // Matches e.g. "@title: My Game" until the next "@" or "*/"
-        const match = code.match(new RegExp(`@${key}:\\s*([\\s\\S]*?)(?=\\n\\s*@|\\n\\s*\\*\\/|$)`));
+        const match = code.match(new RegExp(`@${key}:[ \\t]*([\\s\\S]*?)(?=\\n\\s*@|\\n\\s*\\*\\/|$)`));
         if (!match) return null;
         return { 
             value: match[1]!.trim(), 
@@ -146,7 +146,7 @@ export function checkMetadata(code: string): NormalizedError[] {
             const now = new Date();
             const tooOld = Math.abs(now.getTime() - parsedDate.getTime()) > 183 * 86_400_000;
             if (tooOld || Number.isNaN(parsedDate.getTime())) {
-                warnings.push({ raw: "Outdated @addedOn", description: "Outdated @addedOn.\n\nPlease update the @addedOn date to a recent date (within 6 months).", severity: "warning", line: addedOn.line, column: 1 });
+                warnings.push({ raw: "Invalid @addedOn date", description: "Invalid @addedOn date.\n\nPlease update the @addedOn date to a recent date (within 6 months) in YYYY-MM-DD format.", severity: "warning", line: addedOn.line, column: 1 });
             }
         }
     }
