@@ -2242,7 +2242,7 @@ function drawLobby() {
   if (ShopState.upgrades.hyperDrive) txt("W HYPER", 1, 0, hyperMode ? color`5` : color`4`);
   if (PlayerState.vipTier > 0 && PlayerState.debt === 0) txtR("H VIP " + PlayerState.vipTier, 0, PlayerState.vipMode ? color`6` : color`4`);
   
-  if (UIState.moreMenu) {
+  if (!UIState.moreMenu) {
     txtC(PlayerState.vipMode ? "VIP CASINO 1/2" : "CASINO 1/2", 3, color`6`);
     sprs([[1, 4, cherry], [2, 4, lemon], [3, 4, seven], [5, 4, cardSprite(5)], [8, 4, wheelIcon]]);
     txt("J", 2, 7, color`2`); txt("I", 11, 7, color`2`); txt("L", 17, 7, color`2`);
@@ -4219,10 +4219,10 @@ const InputStateHandlers = {
   lobby: {
     a: () => prevStake(),
     d: () => nextStake(),
-    j: () => UIState.moreMenu ? openSlot() : openBlackjack(),
-    i: () => UIState.moreMenu ? startCard() : openRoulette(),
+    j: () => UIState.moreMenu ? openBlackjack() : openSlot(),
+    i: () => UIState.moreMenu ? openRoulette() : startCard(),
     k: () => { UIState.moreMenu = !UIState.moreMenu; playSound(tickSfx); render(); },
-    l: () => UIState.moreMenu ? startWheel() : openBingo(),
+    l: () => UIState.moreMenu ? openBingo() : startWheel(),
     h: () => { if (PlayerState.vipTier > 0) { PlayerState.vipMode = !PlayerState.vipMode; clampHeat(); updateStakes(); playTune(tickSfx); render(); } },
     w: () => { if (ShopState.upgrades.hyperDrive) { hyperMode = !hyperMode; playSound(tickSfx); render(); } },
     s: () => { UIState.state = "shop"; ShopState.msg = ""; ShopState.cursor = 0; playSound(tickSfx); render(); }
