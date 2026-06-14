@@ -52,8 +52,8 @@ export function transformAndThrowErrors(code: string, engineAPIKeys: string[], r
 
 export function checkMetadata(code: string): NormalizedError[] {
     const warnings: NormalizedError[] = [];
-    const blockMatch = code.match(/\/\*([\s\S]*?)\*\//);
-    if (!blockMatch || !blockMatch[0].includes("@title")) {
+    const blockMatch = code.match(/\/\*([\s\S]*?@title[\s\S]*?)\*\//);
+    if (!blockMatch) {
         warnings.push({
             raw: "Missing metadata block",
             description: "Missing metadata block.\n\nYour game should start with a /* ... */ comment block containing @title, @author, etc.",
