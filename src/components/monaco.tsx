@@ -245,7 +245,7 @@ export default function MonacoComponent(props: MonacoProps) {
 				value: props.initialCode,
 				language: 'javascript',
 				theme: getEffectiveTheme(theme.value) === 'dark' ? 'sprig-dark' : 'sprig-light',
-				minimap: { enabled: false },
+				minimap: { enabled: true },
 				wordWrap: 'on',
 				tabSize: 2,
 				insertSpaces: false,
