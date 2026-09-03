@@ -1,5 +1,7 @@
 import styles from "./editor.module.css";
+import CodeMirror from "../codemirror";
 import MonacoComponent from "../monaco";
+import EditorModePicker, { type EditorMode } from "../editor-mode-picker";
 import Navbar from "../navbar-editor";
 import {
 	IoClose,
@@ -9,12 +11,13 @@ import {
 } from "react-icons/io5";
 import {
 	type Signal,
+	signal,
 	useComputed,
 	useSignal,
 	useSignalEffect,
 } from "@preact/signals";
 import { useEffect, useRef, useState} from "preact/hooks";
-import { monacoEditor, monacoEditorText, errorLog, isNewSaveStrat, muted, type PersistenceState, type RoomState,  screenRef, cleanupRef, reviewState } from "../../lib/state";
+import { codeMirror, codeMirrorEditorText, monacoEditor, monacoEditorText, errorLog, isNewSaveStrat, muted, type PersistenceState, type RoomState,  screenRef, cleanupRef, reviewState } from "../../lib/state";
 import EditorModal from "../popups-etc/editor-modal";
 import { runGame, _performSyntaxCheck } from "../../lib/engine";
 import DraftWarningModal from "../popups-etc/draft-warning";
@@ -32,11 +35,15 @@ import OutOfSpaceModal from "../popups-etc/out-of-space";
 import RoomPasswordPopup from "../popups-etc/room-password";
 import KeyBindingsModal from '../popups-etc/KeyBindingsModal'
 import { PersistenceStateKind } from "../../lib/state";
+import { collapseRanges } from "../../lib/codemirror/util";
+
+const editorMode = signal<EditorMode | null>(null);
+const getEditorCode = () => editorMode.value === "legacy" ? codeMirrorEditorText.value : monacoEditorText.value;
 
 let screenShakeSignal: Signal<number> | null = null;
 
 const performSyntaxCheck = () => {
-	const code = monacoEditorText.value ?? "";
+	const code = getEditorCode() ?? "";
 	const res = _performSyntaxCheck(code);
 	if (res.error) {
 		errorLog.value = [];
@@ -50,7 +57,7 @@ export const onRun = async () => {
 
 	if (cleanupRef.value) cleanupRef.value();
 	errorLog.value = [];
-	const code = monacoEditorText.value ?? "";
+	const code = getEditorCode() ?? "";
 	const res = runGame(code, screenRef.value, (error) => {
 		errorLog.value = [...errorLog.value, error];
 	});
@@ -97,11 +104,38 @@ let defaultHelpAreaHeight = 350;
 const helpAreaHeightMargin = 0; // The margin between the screen and help area
 
 export const foldTemplateLiteral = (from: number, to: number) => {
-	// Monaco handles template literal folding natively.
+	if (editorMode.value !== "legacy" || !codeMirror.value) return;
+	collapseRanges(codeMirror.value, [[from, to]]);
 }
 
 export const foldAllTemplateLiterals = () => {
-	// Monaco handles template literal folding natively.
+	if (editorMode.value === "legacy") {
+		if (!codeMirror.value) return;
+		const code = codeMirrorEditorText.value ?? "";
+		const matches = [...code.matchAll(/(map|bitmap|tune)`[\s\S]*?`/g)];
+		collapseRanges(codeMirror.value, matches.map((match) => [match.index!, match.index! + 1]));
+		return;
+	}
+
+	const editor = monacoEditor.value;
+	const model = editor?.getModel();
+	if (!editor || !model) return;
+	const previousPosition = editor.getPosition();
+	const previousSelection = editor.getSelection();
+	const matches = [...model.getValue().matchAll(/(map|bitmap|tune)`[\s\S]*?`/g)].reverse();
+	for (const match of matches) {
+		const start = model.getPositionAt(match.index!);
+		const end = model.getPositionAt(match.index! + match[0].length);
+		editor.setSelection({
+			startLineNumber: start.lineNumber,
+			startColumn: start.column,
+			endLineNumber: end.lineNumber,
+			endColumn: end.column,
+		});
+		editor.getAction("editor.fold")?.run();
+	}
+	if (previousSelection) editor.setSelection(previousSelection);
+	if (previousPosition) editor.setPosition(previousPosition);
 };
 
 const shouldShowConflict = (persistenceState: Signal<PersistenceState>, sessionId: string) => {
@@ -245,7 +279,7 @@ const exitTutorial = (persistenceState: Signal<PersistenceState>, sessionId: str
 		if(isNewSaveStrat.value)
 			startSavingGame(persistenceState, undefined);
 		else
-		 saveGame(persistenceState, monacoEditorText.value, sessionId);
+		 saveGame(persistenceState, getEditorCode(), sessionId);
 
 	} else {
 		if (persistenceState.value.kind == PersistenceStateKind.SHARED)
@@ -258,6 +292,16 @@ export default function Editor({ persistenceState, cookies, roomState }: EditorP
 	const screenContainer = useRef<HTMLDivElement>(null);
 	const screenControls = useRef<HTMLDivElement>(null);
 	const monacoEditorRef = useRef<any>(null);
+
+	useEffect(() => {
+		const savedMode = localStorage.getItem("sprig-editor-mode");
+		if (savedMode === "legacy" || savedMode === "monaco") editorMode.value = savedMode;
+	}, []);
+
+	const selectEditorMode = (mode: EditorMode) => {
+		localStorage.setItem("sprig-editor-mode", mode);
+		editorMode.value = mode;
+	};
 
 	const [sessionId] = useState(nanoid());
 
@@ -482,7 +526,7 @@ export default function Editor({ persistenceState, cookies, roomState }: EditorP
 					event.preventDefault();
 					if (!continueSaving.value) {
 						continueSaving.value = true;
-						saveGame(persistenceState, monacoEditorText.value, sessionId);
+						saveGame(persistenceState, getEditorCode(), sessionId);
 					}
 				}
 			};
@@ -511,6 +555,31 @@ export default function Editor({ persistenceState, cookies, roomState }: EditorP
 			// @ts-ignore
 			initialCode = persistenceState.value.game.game.code;
 	}
+
+	const editorProps = {
+		persistenceState,
+		roomState,
+		class: styles.code,
+		initialCode,
+		onEditorView: (editor: any) => {
+			if (editorMode.value === "legacy") codeMirror.value = editor;
+			else {
+				monacoEditorRef.current = editor;
+				monacoEditor.value = editor;
+			}
+		},
+		onRunShortcut: onRun,
+		onCodeChange: () => {
+			persistenceState.value = { ...persistenceState.value, stale: true };
+			if (persistenceState.value.kind === PersistenceStateKind.PERSISTED || persistenceState.value.kind === PersistenceStateKind.COLLAB) {
+				persistenceState.value = { ...persistenceState.value, cloudSaveState: "SAVING" };
+				if (!isNewSaveStrat.value) saveGame(persistenceState, getEditorCode(), sessionId);
+			}
+			if (persistenceState.value.kind === PersistenceStateKind.IN_MEMORY) {
+				localStorage.setItem("sprigMemory", getEditorCode());
+			}
+		}
+	};
 	
 	// Firefox has weird tab restoring logic. When you, for example, Ctrl-Shift-T, it opens
 	// a kinda broken cached version of the page. And for some reason this reverts the CM
@@ -536,7 +605,11 @@ export default function Editor({ persistenceState, cookies, roomState }: EditorP
 	useEffect(() => {
 		if (reviewState.value.isReviewMode && reviewState.value.reviewCode) {
 			// Set the code in the editor
-			monacoEditorRef.current?.setValue(reviewState.value.reviewCode);
+			if (editorMode.value === "legacy" && codeMirror.value) {
+				codeMirror.value.dispatch({ changes: { from: 0, to: codeMirror.value.state.doc.length, insert: reviewState.value.reviewCode } });
+			} else {
+				monacoEditorRef.current?.setValue(reviewState.value.reviewCode);
+			}
 		}
 	}, [reviewState.value.isReviewMode, reviewState.value.reviewCode]);
 
@@ -553,39 +626,14 @@ export default function Editor({ persistenceState, cookies, roomState }: EditorP
 
 			<div class={styles.pageMain}>
 				<div className={styles.codeContainer}>
-					<MonacoComponent
-						persistenceState={persistenceState}
-						roomState={roomState}
-						class={styles.code}
-						initialCode={initialCode}
-						onEditorView={(editor) => {
-							monacoEditorRef.current = editor;
-							monacoEditor.value = editor;
-						}}
-						onRunShortcut={onRun}
-						onCodeChange={() => {
-							persistenceState.value = {
-								...persistenceState.value,
-								stale: true,
-							};
-							if (persistenceState.value.kind === PersistenceStateKind.PERSISTED || persistenceState.value.kind === PersistenceStateKind.COLLAB) {
-								persistenceState.value = {
-									...persistenceState.value,
-									cloudSaveState: "SAVING",
-								};
-								console.log("SAVING")
-								if(!isNewSaveStrat.value)
-									saveGame(persistenceState, monacoEditorText.value, sessionId);
-							}
-
-							if (persistenceState.value.kind === PersistenceStateKind.IN_MEMORY) {
-								localStorage.setItem(
-									"sprigMemory",
-									monacoEditorText.value
-								);
-							}
-						}}
-					/>
+					{editorMode.value === null ? (
+						<EditorModePicker onSelect={selectEditorMode} />
+					) : editorMode.value === "legacy" ? (
+						<CodeMirror {...editorProps} />
+					) : (
+						<MonacoComponent {...editorProps} />
+					)}
+					{/* Problems window paused for separate follow-up PR.
 					{errorLog.value.length > 0 && (
 						<div class={styles.errors}>
 							<button
@@ -601,7 +649,7 @@ export default function Editor({ persistenceState, cookies, roomState }: EditorP
 								</div>
 							))}
 						</div>
-					)}
+					)} */}
 				</div>
 
 				<div
