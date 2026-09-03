@@ -1,0 +1,86 @@
+.picker {
+	margin: auto;
+	max-width: 680px;
+	padding: 32px;
+	color: var(--color);
+	font-family: var(--font-body);
+	text-align: center;
+}
+
+.eyebrow {
+	margin: 0 0 8px;
+	color: var(--accent);
+	font-family: var(--font-code);
+	font-size: 0.8rem;
+	font-weight: bold;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+}
+
+.picker h2 {
+	margin: 0;
+	font-size: 1.8rem;
+}
+
+.description {
+	margin: 10px auto 24px;
+	max-width: 480px;
+	color: var(--fg-muted-on-accent);
+}
+
+.options {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 14px;
+}
+
+.option {
+	position: relative;
+	display: flex;
+	min-height: 132px;
+	padding: 22px 18px;
+	border: 2px solid var(--accent);
+	border-radius: 4px;
+	background: var(--background);
+	color: var(--color);
+	font: inherit;
+	text-align: left;
+	cursor: var(--cursor-interactive);
+	flex-direction: column;
+	gap: 8px;
+	transition: background 120ms ease, color 120ms ease, transform 120ms ease;
+}
+
+.option:hover,
+.option:focus-visible {
+	background: var(--accent);
+	color: var(--fg-muted-on-accent);
+	transform: translateY(-2px);
+}
+
+.option strong {
+	font-size: 1.1rem;
+}
+
+.option span:not(.badge) {
+	font-size: 0.9rem;
+	line-height: 1.4;
+}
+
+.badge {
+	align-self: flex-start;
+	padding: 2px 7px;
+	border-radius: 999px;
+	background: var(--accent-light);
+	color: var(--color);
+	font-family: var(--font-code);
+	font-size: 0.7rem;
+	font-weight: bold;
+	text-transform: uppercase;
+}
+
+@media (max-width: 620px) {
+	.options {
+		grid-template-columns: 1fr;
+	}
+}
