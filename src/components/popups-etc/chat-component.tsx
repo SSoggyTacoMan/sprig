@@ -8,7 +8,7 @@ import { RiChatDeleteLine } from "react-icons/ri";
 import MarkdownIt from "markdown-it";
 import { nanoid } from "nanoid";
 import { useState, useEffect } from "preact/hooks";
-import { sha256Hash } from "../../lib/codemirror/util";
+import { sha256Hash } from "../../lib/utils/hash";
 import { PersistenceStateKind } from "../../lib/state";
 
 const md = new MarkdownIt({ html: false, linkify: true, breaks: true });
