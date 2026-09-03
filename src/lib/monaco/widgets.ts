@@ -6,6 +6,7 @@ import { openEditor, type EditorKind } from '../state';
 let commandVersion = 0;
 // Dispose old CodeLens provider on HMR re-runs to avoid duplicate lenses
 let codeLensDisposable: { dispose(): void } | null = null;
+let foldingDisposable: { dispose(): void } | null = null;
 
 export function setupMonacoSprig(monacoInst: typeof monaco, _editor: monaco.editor.IStandaloneCodeEditor) {
 	// Each call gets a fresh unique command ID — safe to call on every HMR reload
@@ -14,6 +15,7 @@ export function setupMonacoSprig(monacoInst: typeof monaco, _editor: monaco.edit
 
 	// Dispose old CodeLens provider so we don't accumulate duplicate lenses
 	codeLensDisposable?.dispose();
+	foldingDisposable?.dispose();
 
 	// Register the command globally — required so CodeLens clicks can invoke it
 	monacoInst.editor.registerCommand(commandId, (_, kind: EditorKind, from: number, to: number, text: string) => {
@@ -77,6 +79,26 @@ export function setupMonacoSprig(monacoInst: typeof monaco, _editor: monaco.edit
 		},
 		resolveCodeLens(_model, codeLens, _token) {
 			return codeLens;
+		}
+	});
+
+	// Add native Monaco folding for bitmap template literals.
+	foldingDisposable = monacoInst.languages.registerFoldingRangeProvider('javascript', {
+		provideFoldingRanges(model) {
+			const ranges: monaco.languages.FoldingRange[] = [];
+			const regex = /bitmap`([\s\S]*?)`/g;
+			const text = model.getValue();
+			let match;
+
+			while ((match = regex.exec(text)) !== null) {
+				const startLine = model.getPositionAt(match.index).lineNumber;
+				const endLine = model.getPositionAt(match.index + match[0].length).lineNumber;
+				if (endLine > startLine) {
+					ranges.push({ start: startLine, end: endLine, kind: monacoInst.languages.FoldingRangeKind.Region });
+				}
+			}
+
+			return ranges;
 		}
 	});
 }
