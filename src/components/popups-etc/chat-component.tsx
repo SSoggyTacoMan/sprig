@@ -1,5 +1,5 @@
 import useLocalStorage from "../../lib/hooks/use-local-storage";
-import { codeMirror, errorLog, type PersistenceState } from "../../lib/state";
+import { monacoEditorText, errorLog, type PersistenceState } from "../../lib/state";
 import Button from "../design-system/button";
 import styles from "./chat-component.module.css";
 import "./chat-syntax.css";
@@ -8,7 +8,7 @@ import { RiChatDeleteLine } from "react-icons/ri";
 import MarkdownIt from "markdown-it";
 import { nanoid } from "nanoid";
 import { useState, useEffect } from "preact/hooks";
-import { sha256Hash } from "../../lib/utils/hash";
+import { sha256Hash } from "../../lib/codemirror/util";
 import { PersistenceStateKind } from "../../lib/state";
 
 const md = new MarkdownIt({ html: false, linkify: true, breaks: true });
@@ -29,7 +29,7 @@ const ChatComponent = ({ persistenceState }: ChatProps) => {
 
 	const systemPrompt = () => `Here is the current code:
 \`\`\`
-${codeMirror.value?.state.doc.toString()}
+${monacoEditorText.value}
 \`\`\`
 
 ${errorLog.value.length > 0
@@ -109,7 +109,7 @@ Answer the questions that follow based on this unless new code is provided.`;
 					]);
 			}
 
-			const newCodeHash = await sha256Hash(codeMirror.value?.state.doc.toString()!);
+			const newCodeHash = await sha256Hash(monacoEditorText.value);
 			// send code as message to give context to the llm for future questions
 			// send new code only if the code has changed since the last one
 			if (newCodeHash !== codeHash) {

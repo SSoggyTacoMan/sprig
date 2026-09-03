@@ -14,7 +14,7 @@ import {
 	useSignalEffect,
 } from "@preact/signals";
 import { useEffect, useRef, useState} from "preact/hooks";
-import { monacoEditorText, errorLog, isNewSaveStrat, muted, type PersistenceState, type RoomState,  screenRef, cleanupRef, reviewState } from "../../lib/state";
+import { monacoEditor, monacoEditorText, errorLog, isNewSaveStrat, muted, type PersistenceState, type RoomState,  screenRef, cleanupRef, reviewState } from "../../lib/state";
 import EditorModal from "../popups-etc/editor-modal";
 import { runGame, _performSyntaxCheck } from "../../lib/engine";
 import DraftWarningModal from "../popups-etc/draft-warning";
@@ -560,6 +560,7 @@ export default function Editor({ persistenceState, cookies, roomState }: EditorP
 						initialCode={initialCode}
 						onEditorView={(editor) => {
 							monacoEditorRef.current = editor;
+							monacoEditor.value = editor;
 						}}
 						onRunShortcut={onRun}
 						onCodeChange={() => {

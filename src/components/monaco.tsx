@@ -12,7 +12,6 @@ import type { MonacoBinding } from 'y-monaco'
 import { setupMonacoSprig } from '../lib/monaco/widgets'
 import { defineThemes } from '../lib/monaco/themes'
 import sprigTypes from '../lib/monaco/sprig-types.txt?raw'
-
 let hasInjectedTypes = false;
 
 import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker'
@@ -49,7 +48,7 @@ export default function MonacoComponent(props: MonacoProps) {
 	const [editorRef, setEditorRef] = useState<monaco.editor.IStandaloneCodeEditor>();
 	const yProviderAwarenessSignal = useSignal<Awareness | undefined>(undefined);
 	const bindingRef = useRef<MonacoBinding>();
-	
+
 	let yDoc = useRef<Y.Doc>();
 	let provider = useRef<WebrtcProvider>();
 
@@ -81,7 +80,7 @@ export default function MonacoComponent(props: MonacoProps) {
 							props.persistenceState.value = {...persistenceState, cloudSaveState: "ERROR"};
 						}
 					}
-				} catch(e){}	
+				} catch(e){}
 			});
 		});
 	});
@@ -101,7 +100,6 @@ export default function MonacoComponent(props: MonacoProps) {
 			provider.current = new WebrtcProvider(props.roomState.value.roomId, yDoc.current, {
 				signaling: [ import.meta.env.PUBLIC_SIGNALING_SERVER_HOST as string ],
 			});
-			
 			let ytext = yDoc.current.getText("monaco");
 			yProviderAwarenessSignal.value = provider.current.awareness;
 
@@ -221,7 +219,6 @@ export default function MonacoComponent(props: MonacoProps) {
 
 			setEditorRef(editor);
 			props.onEditorView?.(editor);
-			
 			setupMonacoSprig(monaco, editor);
 			monacoEditorText.value = editor.getValue();
 
