@@ -1,5 +1,5 @@
 import styles from "./editor.module.css";
-import CodeMirror from "../codemirror";
+import MonacoComponent from "../monaco";
 import Navbar from "../navbar-editor";
 import {
 	IoClose,
@@ -14,13 +14,12 @@ import {
 	useSignalEffect,
 } from "@preact/signals";
 import { useEffect, useRef, useState} from "preact/hooks";
-import { codeMirror, errorLog, isNewSaveStrat, muted, type PersistenceState, type RoomState,  screenRef, cleanupRef, reviewState } from "../../lib/state";
+import { monacoEditorText, errorLog, isNewSaveStrat, muted, type PersistenceState, type RoomState,  screenRef, cleanupRef, reviewState } from "../../lib/state";
 import EditorModal from "../popups-etc/editor-modal";
 import { runGame, _performSyntaxCheck } from "../../lib/engine";
 import DraftWarningModal from "../popups-etc/draft-warning";
 import { debounce } from "throttle-debounce";
 import Help from "../popups-etc/help";
-import { collapseRanges } from "../../lib/codemirror/util";
 import { defaultExampleCode } from "../../lib/examples";
 import MigrateToast from "../popups-etc/migrate-toast";
 import { nanoid } from "nanoid";
@@ -37,7 +36,7 @@ import { PersistenceStateKind } from "../../lib/state";
 let screenShakeSignal: Signal<number> | null = null;
 
 const performSyntaxCheck = () => {
-	const code = codeMirror.value?.state.doc.toString() ?? "";
+	const code = monacoEditorText.value ?? "";
 	const res = _performSyntaxCheck(code);
 	if (res.error) {
 		errorLog.value = [];
@@ -51,7 +50,7 @@ export const onRun = async () => {
 
 	if (cleanupRef.value) cleanupRef.value();
 	errorLog.value = [];
-	const code = codeMirror.value?.state.doc.toString() ?? "";
+	const code = monacoEditorText.value ?? "";
 	const res = runGame(code, screenRef.value, (error) => {
 		errorLog.value = [...errorLog.value, error];
 	});
@@ -98,21 +97,11 @@ let defaultHelpAreaHeight = 350;
 const helpAreaHeightMargin = 0; // The margin between the screen and help area
 
 export const foldTemplateLiteral = (from: number, to: number) => {
-	if (!codeMirror.value) return;
-	collapseRanges(
-		codeMirror.value,
-		[[from, to]]
-	);
+	// Monaco handles template literal folding natively.
 }
 
 export const foldAllTemplateLiterals = () => {
-	if (!codeMirror.value) return;
-	const code = codeMirror.value.state.doc.toString() ?? "";
-	const matches = [...code.matchAll(/(map|bitmap|tune)`[\s\S]*?`/g)];
-	collapseRanges(
-		codeMirror.value,
-		matches.map((match) => [match.index!, match.index! + 1])
-	);
+	// Monaco handles template literal folding natively.
 };
 
 const shouldShowConflict = (persistenceState: Signal<PersistenceState>, sessionId: string) => {
@@ -256,7 +245,7 @@ const exitTutorial = (persistenceState: Signal<PersistenceState>, sessionId: str
 		if(isNewSaveStrat.value)
 			startSavingGame(persistenceState, undefined);
 		else
-        	saveGame(persistenceState, codeMirror.value!.state.doc.toString(), sessionId);
+		 saveGame(persistenceState, monacoEditorText.value, sessionId);
 
 	} else {
 		if (persistenceState.value.kind == PersistenceStateKind.SHARED)
@@ -268,6 +257,7 @@ export default function Editor({ persistenceState, cookies, roomState }: EditorP
 	const outputArea = useRef<HTMLDivElement>(null);
 	const screenContainer = useRef<HTMLDivElement>(null);
 	const screenControls = useRef<HTMLDivElement>(null);
+	const monacoEditorRef = useRef<any>(null);
 
 	const [sessionId] = useState(nanoid());
 
@@ -492,7 +482,7 @@ export default function Editor({ persistenceState, cookies, roomState }: EditorP
 					event.preventDefault();
 					if (!continueSaving.value) {
 						continueSaving.value = true;
-						saveGame(persistenceState, codeMirror.value!.state.doc.toString(), sessionId);
+						saveGame(persistenceState, monacoEditorText.value, sessionId);
 					}
 				}
 			};
@@ -546,15 +536,7 @@ export default function Editor({ persistenceState, cookies, roomState }: EditorP
 	useEffect(() => {
 		if (reviewState.value.isReviewMode && reviewState.value.reviewCode) {
 			// Set the code in the editor
-			if (codeMirror.value) {
-				codeMirror.value.dispatch({
-					changes: {
-						from: 0,
-						to: codeMirror.value.state.doc.length,
-						insert: reviewState.value.reviewCode
-					}
-				});
-			}
+			monacoEditorRef.current?.setValue(reviewState.value.reviewCode);
 		}
 	}, [reviewState.value.isReviewMode, reviewState.value.reviewCode]);
 
@@ -571,14 +553,13 @@ export default function Editor({ persistenceState, cookies, roomState }: EditorP
 
 			<div class={styles.pageMain}>
 				<div className={styles.codeContainer}>
-					<CodeMirror
+					<MonacoComponent
 						persistenceState={persistenceState}
 						roomState={roomState}
 						class={styles.code}
 						initialCode={initialCode}
 						onEditorView={(editor) => {
-							codeMirror.value = editor;
-							setTimeout(() => foldAllTemplateLiterals(), 100); // Fold after the document is parsed (gross)
+							monacoEditorRef.current = editor;
 						}}
 						onRunShortcut={onRun}
 						onCodeChange={() => {
@@ -593,13 +574,13 @@ export default function Editor({ persistenceState, cookies, roomState }: EditorP
 								};
 								console.log("SAVING")
 								if(!isNewSaveStrat.value)
-									saveGame(persistenceState, codeMirror.value!.state.doc.toString(), sessionId);
+									saveGame(persistenceState, monacoEditorText.value, sessionId);
 							}
 
 							if (persistenceState.value.kind === PersistenceStateKind.IN_MEMORY) {
 								localStorage.setItem(
 									"sprigMemory",
-									codeMirror.value!.state.doc.toString()
+									monacoEditorText.value
 								);
 							}
 						}}

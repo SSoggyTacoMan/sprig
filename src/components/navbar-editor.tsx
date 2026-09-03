@@ -1,6 +1,7 @@
 import { type Signal, useSignal, useSignalEffect } from "@preact/signals";
 import {
-	codeMirror,
+	monacoEditor,
+	monacoEditorText,
 	type PersistenceState,
 	errorLog,
 	editSessionLength,
@@ -34,11 +35,10 @@ import {
 import { FaBrush } from "react-icons/fa";
 import { usePopupCloseClick } from "../lib/utils/popup-close-click";
 import { upload, uploadState } from "../lib/upload";
-import { VscLoading } from "react-icons/vsc";
+import { VscLoading, VscError } from "react-icons/vsc";
 import { defaultExampleCode } from "../lib/examples";
 import beautifier from "js-beautify";
-import { collapseRanges } from "../lib/codemirror/util";
-import { foldAllTemplateLiterals, onRun} from "./big-interactive-pages/editor";
+import { onRun } from "./big-interactive-pages/editor";
 import { showKeyBinding } from '../lib/state';
 import { validateGitHubToken, forkRepository, createBranch, createCommit, fetchLatestCommitSha, createTreeAndCommit, createPullRequest, fetchForkedRepository, updateBranch, createBlobForImage } from "../lib/game-saving/github";
 
@@ -232,42 +232,25 @@ const constructGithubAuthUrl = (userId: string | null): string => {
 };
 
 const prettifyCode = () => {
-	// Check if the codeMirror is ready
-	if (!codeMirror.value) return;
+	if (!monacoEditor.value) return;
 
-	// Get the code
-	const code = codeMirror.value.state.doc.toString();
+	const code = monacoEditor.value.getValue();
 
-	// Set the options for js_beautify
 	const options = {
-		indent_size: 2, // Indent by 2 spaces
-		brace_style: "collapse,preserve-inline" as any, // Collapse braces and preserve inline
+		indent_size: 2,
+		brace_style: "collapse,preserve-inline" as any,
 	};
 
 	const { js_beautify } = beautifier;
-	// Format the code
 	const formattedCode = js_beautify(code, options);
 
-	// Create an update transaction with the formatted code
-	const updateTransaction = codeMirror.value.state.update({
-		changes: {
-			from: 0,
-			to: codeMirror.value.state.doc.length,
-			insert: formattedCode,
-		},
-	});
-
-	// Find all the matches of the code, bitmap and tune blocks
-	const matches = [...formattedCode.matchAll(/(map|bitmap|tune)`[\s\S]*?`/g)];
-
-	// Apply the update to the editor
-	codeMirror.value.dispatch(updateTransaction);
-
-	// Collapse the ranges of the matches
-	collapseRanges(
-		codeMirror.value,
-		matches.map((match) => [match.index!, match.index! + 1])
-	);
+	const model = monacoEditor.value.getModel();
+	if(model) {
+		monacoEditor.value.executeEdits("prettify", [{
+			range: model.getFullModelRange(),
+			text: formattedCode
+		}]);
+	}
 };
 
 
@@ -492,7 +475,7 @@ export default function EditorNavbar(props: EditorNavbarProps) {
 			const gameTitle = gameTitleElement.value.trim();
 			const authorName = authorNameElement.value.trim();
 			const gameDescription = gameDescriptionElement.value.trim();
-			const gameCode = codeMirror.value?.state.doc.toString() ?? "";
+			const gameCode = monacoEditor.value?.getValue() ?? "";
 			const gameControlsDescription = gameControlsDescriptionElement.value;
 
 			clearError("gameDescription");
@@ -1057,7 +1040,7 @@ export default function EditorNavbar(props: EditorNavbarProps) {
 									}
 									spinnyIcon={uploadState.value === "LOADING"}
 									loading={uploadState.value === "LOADING"}
-									onClick={() => upload(codeMirror.value?.state.doc.toString() ?? "",
+									onClick={() => upload(monacoEditorText.value,
 										props.persistenceState.value.kind == "PERSISTED"
 											&& props.persistenceState.value.game != "LOADING"
 											? props.persistenceState.value.game.name
@@ -1143,8 +1126,11 @@ export default function EditorNavbar(props: EditorNavbarProps) {
 							// 'from' and 'to' represent the index of character where the selection is started to where it's ended
 							// if 'from' and 'to' are equal, then it's the cursor position
 							// from && to being -1 means the cursor is not in the editor
-							const selectionRange = codeMirror.value?.state
-								.selection.ranges[0] ?? { from: -1, to: -1 };
+							const selection = monacoEditor.value?.getSelection();
+							const selectionRange = selection ? {
+								from: monacoEditor.value.getModel()?.getOffsetAt(selection.getStartPosition()) ?? -1,
+								to: monacoEditor.value.getModel()?.getOffsetAt(selection.getEndPosition()) ?? -1
+							} : { from: -1, to: -1 };
 
 							// Store a copy of the user's code, currently active errors and the length of their editing session
 							// along with their description of the issue
@@ -1155,7 +1141,7 @@ export default function EditorNavbar(props: EditorNavbarProps) {
 								}),
 								email: props.persistenceState.value.session
 									?.user.email,
-								code: codeMirror.value?.state.doc.toString(),
+								code: monacoEditorText.value,
 								error: errorLog.value,
 								sessionLength:
 									(new Date().getTime() -
@@ -1265,14 +1251,13 @@ export default function EditorNavbar(props: EditorNavbarProps) {
 											if (resetState.value === "idle") {
 												resetState.value = "confirm";
 											} else {
-												codeMirror.value?.dispatch({
-													changes: {
-														from: 0,
-														to: codeMirror.value
-															.state.doc.length,
-														insert: defaultExampleCode,
-													},
-												});
+												const model = monacoEditor.value?.getModel();
+												if (model) {
+													monacoEditor.value.executeEdits("reset", [{
+														range: model.getFullModelRange(),
+														text: defaultExampleCode
+													}]);
+												}
 												resetState.value = "idle";
 											}
 										}}
@@ -1360,8 +1345,7 @@ export default function EditorNavbar(props: EditorNavbarProps) {
 											? props.persistenceState.value.name
 											: "sprig-game";
 									const code =
-										codeMirror.value?.state.doc.toString() ??
-										"";
+										monacoEditorText.value;
 									const url = URL.createObjectURL(
 										new Blob([code], {
 											type: "application/javascript",

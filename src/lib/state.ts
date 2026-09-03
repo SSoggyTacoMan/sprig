@@ -116,6 +116,9 @@ export type GithubState = {
 
 export const codeMirror = signal<EditorView | null>(null)
 export const codeMirrorEditorText = signal<string>('');
+import type * as monaco from 'monaco-editor'
+export const monacoEditor = signal<monaco.editor.IStandaloneCodeEditor | null>(null)
+export const monacoEditorText = signal<string>('');
 export const muted = signal<boolean>(false)
 export const errorLog = signal<NormalizedError[]>([])
 export const openEditor = signal<OpenEditor | null>(null)
