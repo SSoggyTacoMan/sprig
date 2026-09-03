@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync } from "node:fs";
+import { readFileSync, readdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import {
 	REVIEW_BOT_MARKER,
@@ -84,6 +84,8 @@ if (!modifiesGames && !hasLabel(labels, "Submission")) {
 	console.log("Not a submission PR (no games/ files modified and no Submission label); skipping.");
 	process.exit(0);
 }
+
+await materializeSubmittedGameFiles(pullRequest, pullFiles, workspace);
 const result = await validateSubmission({
 	pullRequest,
 	pullFiles,
@@ -107,6 +109,25 @@ console.log("Validation Result:", JSON.stringify(result, null, 2));
 console.log("\nBot Comment Body:\n", buildComment(result));
 
 if (!result.ok) process.exit(1);
+
+async function materializeSubmittedGameFiles(pullRequest, pullFiles, workspace) {
+	const headRepo = pullRequest.head.repo?.full_name ?? `${owner}/${repo}`;
+	const headSha = pullRequest.head.sha;
+	const gameFiles = pullFiles.filter((file) => /^games\/[A-Za-z0-9_-]+\.js$/.test(file.filename));
+
+	for (const file of gameFiles) {
+		const contentFile = await githubRequest(
+			token,
+			"GET",
+			`/repos/${headRepo}/contents/${file.filename.split("/").map(encodeURIComponent).join("/")}?ref=${encodeURIComponent(headSha)}`
+		);
+		if (typeof contentFile?.content !== "string" || contentFile.encoding !== "base64") {
+			throw new Error(`Unable to read submitted file ${file.filename} from GitHub contents API.`);
+		}
+
+		writeFileSync(path.join(workspace, file.filename), Buffer.from(contentFile.content, "base64"));
+	}
+}
 
 async function validateSubmission({ pullRequest, pullFiles, workspace, reviewBaseUrl, owner, repo }) {
 	const checks = [];
