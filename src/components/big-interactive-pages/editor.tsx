@@ -633,7 +633,7 @@ export default function Editor({ persistenceState, cookies, roomState }: EditorP
 					) : (
 						<MonacoComponent {...editorProps} />
 					)}
-					{/* Problems window paused for separate follow-up PR.
+					{/* Problems window intentionally disabled; restore in follow-up PR.
 					{errorLog.value.length > 0 && (
 						<div class={styles.errors}>
 							<button
