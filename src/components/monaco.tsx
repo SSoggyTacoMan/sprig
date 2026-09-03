@@ -11,6 +11,23 @@ import { startSavingGame } from './big-interactive-pages/editor'
 import type { MonacoBinding } from 'y-monaco'
 import { setupMonacoSprig } from '../lib/monaco/widgets'
 import { defineThemes } from '../lib/monaco/themes'
+import sprigTypes from '../lib/monaco/sprig-types.txt?raw'
+
+let hasInjectedTypes = false;
+
+import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker'
+import tsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker?worker'
+
+if (typeof self !== 'undefined') {
+	self.MonacoEnvironment = {
+		getWorker(_, label) {
+			if (label === 'typescript' || label === 'javascript') {
+				return new tsWorker();
+			}
+			return new editorWorker();
+		}
+	};
+}
 
 const getEffectiveTheme = (themeType: string) => {
 	if (themeType === 'dark' || themeType === 'busker') return 'dark';
@@ -115,6 +132,7 @@ export default function MonacoComponent(props: MonacoProps) {
 				if(props.roomState) props.roomState.value.participants = participants;
 			});
 
+			let updateTimeoutId: ReturnType<typeof setTimeout>;
 			yDoc.current.on("update", () => {
 				if(!props.persistenceState) return;
 				let persistenceState = props.persistenceState.peek();
@@ -123,8 +141,11 @@ export default function MonacoComponent(props: MonacoProps) {
 						startSavingGame(props.persistenceState, props.roomState);
 					}
 				}
-				monacoEditorText.value = editor.getValue();
-				onCodeChangeRef.current?.();
+				clearTimeout(updateTimeoutId);
+				updateTimeoutId = setTimeout(() => {
+					monacoEditorText.value = editor.getValue();
+					onCodeChangeRef.current?.();
+				}, 300);
 			});
 		} catch(e) {
 			console.error(e);
@@ -134,6 +155,49 @@ export default function MonacoComponent(props: MonacoProps) {
 	useEffect(() => {
 		if (containerRef.current) {
 			defineThemes(monaco);
+
+			if (!hasInjectedTypes) {
+				monaco.languages.typescript.javascriptDefaults.setCompilerOptions({
+					target: monaco.languages.typescript.ScriptTarget.ES2020,
+					allowNonTsExtensions: true,
+					lib: ['es2020', 'dom']
+				});
+				monaco.languages.typescript.javascriptDefaults.addExtraLib(sprigTypes, 'sprig.d.ts');
+
+				monaco.languages.registerCompletionItemProvider('javascript', {
+					provideCompletionItems: (model, position) => {
+						const word = model.getWordUntilPosition(position);
+						const range = {
+							startLineNumber: position.lineNumber,
+							endLineNumber: position.lineNumber,
+							startColumn: word.startColumn,
+							endColumn: word.endColumn
+						};
+						return {
+							suggestions: [
+								{
+									label: 'sprite',
+									kind: monaco.languages.CompletionItemKind.Snippet,
+									insertText: "const ${1:player} = {\n\ttype: '${2:player}',\n\tx: ${3:0},\n\ty: ${4:0}\n};\naddSprite(${1:player}.x, ${1:player}.y, ${1:player}.type);",
+									insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+									documentation: 'Boilerplate for a new Sprig sprite object',
+									range
+								},
+								{
+									label: 'map',
+									kind: monaco.languages.CompletionItemKind.Snippet,
+									insertText: "const level = map\\`\n........\n........\n........\n........\n........\n........\n........\n........\n\\`;\nsetMap(level);",
+									insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+									documentation: 'Boilerplate for an 8x8 map literal',
+									range
+								}
+							]
+						};
+					}
+				});
+				hasInjectedTypes = true;
+			}
+
 			const editor = monaco.editor.create(containerRef.current, {
 				value: props.initialCode,
 				language: 'javascript',
@@ -144,7 +208,15 @@ export default function MonacoComponent(props: MonacoProps) {
 				insertSpaces: false,
 				codeLens: true,
 				fontFamily: 'monospace',
-				automaticLayout: true
+				automaticLayout: true,
+				formatOnPaste: true,
+				formatOnType: true,
+				bracketPairColorization: { enabled: true },
+				autoClosingBrackets: 'always',
+				cursorBlinking: "smooth",
+				cursorSmoothCaretAnimation: "on",
+				smoothScrolling: true,
+				stickyScroll: { enabled: true }
 			});
 
 			setEditorRef(editor);
@@ -157,16 +229,23 @@ export default function MonacoComponent(props: MonacoProps) {
 				onRunShortcutRef.current?.();
 			});
 
+			let timeoutId: ReturnType<typeof setTimeout>;
 			if (!isNewSaveStrat.value) {
 				editor.onDidChangeModelContent(() => {
-					monacoEditorText.value = editor.getValue();
-					onCodeChangeRef.current?.();
+					clearTimeout(timeoutId);
+					timeoutId = setTimeout(() => {
+						monacoEditorText.value = editor.getValue();
+						onCodeChangeRef.current?.();
+					}, 300);
 				});
 			} else {
 				setupYjs(editor);
 			}
 
-			return () => editor.dispose();
+			return () => {
+				clearTimeout(timeoutId);
+				editor.dispose();
+			};
 		}
 	}, []);
 
