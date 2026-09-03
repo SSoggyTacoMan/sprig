@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'preact/hooks'
-import * as monaco from 'monaco-editor'
+import type * as monaco from 'monaco-editor'
 import styles from './monaco.module.css'
 import { theme, errorLog, isNewSaveStrat, ConnectionStatus, PersistenceStateKind, monacoEditorText } from '../lib/state'
 import type { PersistenceState, RoomState, RoomParticipant } from '../lib/state'
@@ -13,20 +13,6 @@ import { setupMonacoSprig } from '../lib/monaco/widgets'
 import { defineThemes } from '../lib/monaco/themes'
 import sprigTypes from '../lib/monaco/sprig-types.txt?raw'
 let hasInjectedTypes = false;
-
-import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker'
-import tsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker?worker'
-
-if (typeof self !== 'undefined') {
-	self.MonacoEnvironment = {
-		getWorker(_, label) {
-			if (label === 'typescript' || label === 'javascript') {
-				return new tsWorker();
-			}
-			return new editorWorker();
-		}
-	};
-}
 
 const getEffectiveTheme = (themeType: string) => {
 	if (themeType === 'dark' || themeType === 'busker') return 'dark';
@@ -46,6 +32,7 @@ interface MonacoProps {
 export default function MonacoComponent(props: MonacoProps) {
 	const containerRef = useRef<HTMLDivElement>(null);
 	const [editorRef, setEditorRef] = useState<monaco.editor.IStandaloneCodeEditor>();
+	const monacoRef = useRef<typeof monaco>();
 	const yProviderAwarenessSignal = useSignal<Awareness | undefined>(undefined);
 	const bindingRef = useRef<MonacoBinding>();
 
@@ -151,7 +138,22 @@ export default function MonacoComponent(props: MonacoProps) {
 	}
 
 	useEffect(() => {
-		if (containerRef.current) {
+		let dispose = () => {};
+		if (containerRef.current && typeof window !== 'undefined') {
+			const initialize = async () => {
+			const monaco = await import('monaco-editor');
+			const [{ default: editorWorker }, { default: tsWorker }] = await Promise.all([
+				import('monaco-editor/esm/vs/editor/editor.worker?worker'),
+				import('monaco-editor/esm/vs/language/typescript/ts.worker?worker'),
+			]);
+			(globalThis as any).MonacoEnvironment = {
+				getWorker(_: unknown, label: string) {
+					return label === 'typescript' || label === 'javascript'
+						? new tsWorker()
+						: new editorWorker();
+				}
+			};
+			monacoRef.current = monaco;
 			defineThemes(monaco);
 
 			if (!hasInjectedTypes) {
@@ -239,16 +241,19 @@ export default function MonacoComponent(props: MonacoProps) {
 				setupYjs(editor);
 			}
 
-			return () => {
+			dispose = () => {
 				clearTimeout(timeoutId);
 				editor.dispose();
 			};
+			};
+			initialize();
 		}
+		return () => dispose();
 	}, []);
 
 	useEffect(() => {
 		if(editorRef && theme.value) {
-			monaco.editor.setTheme(getEffectiveTheme(theme.value) === 'dark' ? 'sprig-dark' : 'sprig-light');
+			monacoRef.current?.editor.setTheme(getEffectiveTheme(theme.value) === 'dark' ? 'sprig-dark' : 'sprig-light');
 		}
 	}, [theme.value, editorRef]);
 
@@ -260,9 +265,9 @@ export default function MonacoComponent(props: MonacoProps) {
 				endLineNumber: e.line!,
 				endColumn: 1000,
 				message: e.description,
-				severity: monaco.MarkerSeverity.Error
+				severity: monacoRef.current!.MarkerSeverity.Error
 			}));
-			monaco.editor.setModelMarkers(editorRef.getModel()!, "sprig", markers);
+			if (monacoRef.current) monacoRef.current.editor.setModelMarkers(editorRef.getModel()!, "sprig", markers);
 		}
 	}, [errorLog.value, editorRef]);
 
