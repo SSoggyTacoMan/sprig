@@ -132,6 +132,31 @@
 	display: block;
 }
 
+.switchEditorButton {
+	position: relative;
+}
+
+.switchEditorTooltip {
+	position: absolute;
+	top: calc(100% + 10px);
+	right: 0;
+	z-index: 10;
+	display: none;
+	width: max-content;
+	padding: 6px 9px;
+	border-radius: 4px;
+	background: #27332f;
+	color: white;
+	font-size: 0.75rem;
+	white-space: nowrap;
+	pointer-events: none;
+}
+
+.switchEditorButton:hover .switchEditorTooltip,
+.switchEditorButton:focus-visible .switchEditorTooltip {
+	display: block;
+}
+
 .plainLink {
 	margin: 0 4px;
 }

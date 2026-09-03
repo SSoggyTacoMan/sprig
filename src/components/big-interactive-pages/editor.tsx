@@ -1,7 +1,7 @@
 import styles from "./editor.module.css";
 import CodeMirror from "../codemirror";
 import MonacoComponent from "../monaco";
-import EditorModePicker, { type EditorMode } from "../editor-mode-picker";
+type EditorMode = "legacy" | "monaco";
 import Navbar from "../navbar-editor";
 import {
 	IoClose,
@@ -295,12 +295,16 @@ export default function Editor({ persistenceState, cookies, roomState }: EditorP
 
 	useEffect(() => {
 		const savedMode = localStorage.getItem("sprig-editor-mode");
-		if (savedMode === "legacy" || savedMode === "monaco") editorMode.value = savedMode;
+		editorMode.value = savedMode === "monaco" ? "monaco" : "legacy";
 	}, []);
 
-	const selectEditorMode = (mode: EditorMode) => {
-		localStorage.setItem("sprig-editor-mode", mode);
-		editorMode.value = mode;
+	const switchEditorMode = () => {
+		const code = getEditorCode();
+		const nextMode = editorMode.value === "legacy" ? "monaco" : "legacy";
+		if (nextMode === "monaco") monacoEditorText.value = code;
+		else codeMirrorEditorText.value = code;
+		localStorage.setItem("sprig-editor-mode", nextMode);
+		editorMode.value = nextMode;
 	};
 
 	const [sessionId] = useState(nanoid());
@@ -549,7 +553,9 @@ export default function Editor({ persistenceState, cookies, roomState }: EditorP
 	else if (persistenceState.value.kind === PersistenceStateKind.SHARED)
 		initialCode = persistenceState.value.code;
 	else if (persistenceState.value.kind === PersistenceStateKind.IN_MEMORY)
-		initialCode = localStorage.getItem("sprigMemory") ?? defaultExampleCode;
+		initialCode = typeof window !== "undefined"
+			? localStorage.getItem("sprigMemory") ?? defaultExampleCode
+			: defaultExampleCode;
 	else if (isNewSaveStrat.value && persistenceState.value.kind === PersistenceStateKind.COLLAB){
 		if(typeof persistenceState.value.game !== 'string')
 			// @ts-ignore
@@ -622,16 +628,18 @@ export default function Editor({ persistenceState, cookies, roomState }: EditorP
 		:
 			(
 		<div class={styles.page}>
-			<Navbar persistenceState={persistenceState} roomState={roomState}/>
+			<Navbar persistenceState={persistenceState} roomState={roomState} onSwitchEditor={switchEditorMode}/>
 
 			<div class={styles.pageMain}>
 				<div className={styles.codeContainer}>
-					{editorMode.value === null ? (
-						<EditorModePicker onSelect={selectEditorMode} />
-					) : editorMode.value === "legacy" ? (
-						<CodeMirror {...editorProps} />
+					{editorMode.value === "legacy" ? (
+						<>
+							<CodeMirror {...editorProps} />
+						</>
 					) : (
-						<MonacoComponent {...editorProps} />
+						<>
+							<MonacoComponent {...editorProps} />
+						</>
 					)}
 					{/* Problems window intentionally disabled; restore in follow-up PR.
 					{errorLog.value.length > 0 && (

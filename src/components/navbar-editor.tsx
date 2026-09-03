@@ -30,6 +30,7 @@ import {
 	IoSaveOutline,
 	IoShareOutline,
 	IoShuffle,
+	IoSwapHorizontal,
 	IoWarning,
 } from "react-icons/io5";
 import { FaBrush } from "react-icons/fa";
@@ -99,6 +100,7 @@ async function reportMetric(metricName: string, value = 1, type = 'increment') {
 interface EditorNavbarProps {
 	persistenceState: Signal<PersistenceState>
 	roomState: Signal<RoomState> | undefined
+	onSwitchEditor: () => void
 }
 
 type StuckCategory =
@@ -796,6 +798,22 @@ export default function EditorNavbar(props: EditorNavbarProps) {
 						target="_blank"
 					>
 						<IoLogoGithub />
+					</a>
+				</li>
+
+				<li class={styles.actionIcon}>
+					<a
+						class={styles.switchEditorButton}
+						role="button"
+						tabIndex={0}
+						aria-label="Switch editor"
+						onKeyDown={(event) => {
+							if (event.key === "Enter" || event.key === " ") props.onSwitchEditor();
+						}}
+						onClick={props.onSwitchEditor}
+					>
+						<IoSwapHorizontal />
+						<span class={styles.switchEditorTooltip}>Switch editor. Your code will be kept.</span>
 					</a>
 				</li>
 
