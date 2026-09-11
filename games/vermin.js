@@ -10,7 +10,7 @@
 @description: Sprig remake of Vermin with LCD-style timing, bursts, misses, and five-lane mole logic.\
 @author: SSoggyTacoMan\
 @tags: ['test', 'review']\
-@addedOn: 2026-09-11\
+@addedOn: 2026-09-11
 \
 Controls:\
 A / D = move left / right\
