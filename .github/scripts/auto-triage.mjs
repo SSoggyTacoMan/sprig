@@ -20,14 +20,21 @@ if (!token) throw new Error("GITHUB_TOKEN is required");
 
 const { owner, repo } = getRepository();
 const event = readGitHubEvent();
-const pullRequest = event.pull_request || event.issue;
+let pullRequest = event.pull_request || event.issue;
+let prNumber = pullRequest?.number;
 
-if (!pullRequest || (!event.pull_request && !event.issue?.pull_request)) {
+if (process.env.TEST_PR_NUMBER) {
+	prNumber = parseInt(process.env.TEST_PR_NUMBER);
+	try {
+		pullRequest = await githubRequest(token, "GET", `/repos/${owner}/${repo}/pulls/${prNumber}`);
+	} catch (e) {
+		console.error("Failed to fetch PR for testing:", e);
+		process.exit(1);
+	}
+} else if (!pullRequest || (!event.pull_request && !event.issue?.pull_request)) {
 	console.log("No pull request in event; skipping auto triage.");
 	process.exit(0);
 }
-
-const prNumber = pullRequest.number;
 
 if (pullRequest.draft) {
 	console.log("PR is a draft. Skipping triage.");
@@ -35,6 +42,73 @@ if (pullRequest.draft) {
 }
 
 if (event.comment && event.action === "created") {
+	const commentBody = (event.comment.body ?? "").trim();
+	const commenterLogin = event.comment.user?.login;
+
+	// /check-ai command — only for authorized reviewers (maintainers + triagers from review-roles.json)
+	if (commentBody === "/check-ai") {
+		let isAuthorized = false;
+		try {
+			const rolesPath = path.resolve(new URL(".", import.meta.url).pathname, "../review-roles.json");
+			const roles = JSON.parse(readFileSync(rolesPath, "utf-8"));
+			const authorized = [...(roles.maintainers ?? []), ...(roles.triagers ?? [])];
+			isAuthorized = authorized.includes(commenterLogin);
+		} catch (e) {
+			console.log("Failed to load review-roles.json:", e.message);
+		}
+
+		if (!isAuthorized) {
+			console.log(`${commenterLogin} is not an authorized collaborator. Ignoring /check-ai.`);
+			process.exit(0);
+		}
+
+		console.log(`/check-ai triggered by authorized user ${commenterLogin}`);
+
+		const latestFiles = await githubPaginated(token, `/repos/${owner}/${repo}/pulls/${prNumber}/files`);
+		const jsFiles = latestFiles.filter(f => /^games\/[A-Za-z0-9_-]+\.js$/.test(f.filename));
+
+		if (jsFiles.length !== 1) {
+			console.log("Could not find exactly one game file. Aborting /check-ai.");
+			process.exit(0);
+		}
+
+		const workspace = path.resolve(process.env.SUBMISSION_PATH ?? process.cwd());
+		const gameFilePath = path.join(workspace, jsFiles[0].filename);
+		const code = readFileSafe(gameFilePath);
+
+		if (!code) {
+			console.log("Could not read game file. Aborting /check-ai.");
+			process.exit(0);
+		}
+
+		console.log(`Running AI analysis on ${jsFiles[0].filename}...`);
+		const vibecoding = await checkVibecoding(code);
+
+		// Update the AI Suspicion label
+		if (vibecoding && vibecoding.ai_probability >= 80) {
+			await addLabels({ owner, repo, token, issueNumber: prNumber, labels: ["AI Suspicion"] });
+		} else {
+			await removeLabel({ owner, repo, token, issueNumber: prNumber, label: "AI Suspicion" });
+		}
+
+		// Post/update a dedicated comment with the result
+		const aiSection = vibecoding
+			? `<details>\n<summary><b>AI Suspicion (AI Probability: ${vibecoding.ai_probability}%)</b></summary>\n\n**Consensus:** ${vibecoding.reason}\n</details>`
+			: "_AI analysis returned no result._";
+
+		const resultBody = `<!-- check-ai-result -->\n> ✅ **/check-ai** run by @${commenterLogin}\n\n${aiSection}`;
+		await upsertBotComment({
+			owner,
+			repo,
+			token,
+			issueNumber: prNumber,
+			marker: "<!-- check-ai-result -->",
+			body: resultBody,
+		});
+
+		process.exit(0);
+	}
+
 	if (pullRequest.state === "closed" && event.comment.user.login === pullRequest.user.login) {
 		const labels = (pullRequest.labels ?? []).map(l => typeof l === "string" ? l : l.name);
 		if (hasLabel(labels, "Submission")) {
@@ -144,12 +218,16 @@ async function validateSubmission({ pullRequest, pullFiles, workspace, reviewBas
 	let playUrl = null;
 	let screenshotUrl = null;
 	let similarity = { score: 0, match: null };
+	let vibecoding = null;
 
 	if (jsFiles.length === 1) {
 		gameFile = jsFiles[0];
-		const result = await validateSingleGameFile(gameFile, workspace, addCheck, warnings);
+		// Skip the expensive AI check when a new commit is pushed — only authorized users can trigger it via /check-ai
+		const skipAI = event.action === "synchronize";
+		const result = await validateSingleGameFile(gameFile, workspace, addCheck, warnings, skipAI);
 		metadata = result.metadata;
 		similarity = result.similarity;
+		vibecoding = result.vibecoding;
 
 		rawUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${pullRequest.head.sha}/${gameFile.filename}`;
 		
@@ -182,6 +260,7 @@ async function validateSubmission({ pullRequest, pullFiles, workspace, reviewBas
 		playUrl,
 		screenshotUrl,
 		similarity,
+		vibecoding,
 	};
 }
 
@@ -393,6 +472,141 @@ function readFileSafe(filePath) {
 	}
 }
 
+async function checkVibecoding(code) {
+	const apiKey = process.env.OPENROUTER_API_KEY;
+	if (!apiKey) return null;
+
+	const prompt = `Analyze this Sprig game code. Calculate the probability (0 to 100%) that it was generated by an AI (LLM) rather than a beginner programmer. 
+You are acting as a forensic code reviewer. We are specifically hunting for "AI Slop" - low-effort, entirely AI-generated games that rely on ChatGPT's standard boilerplate.
+
+CRITICAL AI "giveaways" (increases probability MASSIVELY):
+- Numbered Section Comments: ChatGPT almost always outputs Sprig games with numbered headings like "// 1. SET UP THE ART", "// 2. CONFIGURE GAME RULES", "// 3. MOVEMENT LOGIC". If you see this pattern, it is almost certainly AI slop.
+- Over-Explaining: Narrating exactly what the syntax does instead of explaining intent.
+- Generic Naming: Safe, generic names like \`data\`, \`result\`, \`temp\`, \`item\`.
+- Hallucinated APIs: Assuming Sprig has DOM access (e.g. \`document.getElementById\`) or using standard game loop boilerplates.
+
+Crucially, look out for Human "giveaways" (decreases probability significantly):
+- Very Specific Assets: Complex, hand-crafted bitmaps or specific tune numbers that were clearly generated using Sprig's built-in visual editor tools. AI struggles to hallucinate perfectly structured Sprig bitmaps.
+- Beginner Logic Patterns: Long, inefficient \`if / else if\` chains instead of switches/maps, or slightly clunky procedural code that looks hand-typed by a learner.
+- Genuine Game-Specific Naming: Creative, hyper-specific variable names tied directly to the game's theme.
+- Expert Human Patterns: Do NOT penalize a game simply for being "too perfect" or well-structured. Expert human developers submit games too! Distinguish between genuine human expertise (clever game loops, thoughtful abstractions, highly customized algorithms) and lazy LLM "polish" (bloated boilerplate, robotic symmetry).
+
+Note: The above points are entirely optional guidelines. You do not need to check them off like a list. Ultimately, you should trust your own intuition and internal logic as an advanced AI to judge whether this code "vibes" like it was written by an LLM or a human learner.
+
+Think critically and identify any other subtle traits. Reply with ONLY a JSON object: {"ai_probability": 85, "reason": "Brief summary of evidence"}.
+
+Code:
+${code.substring(0, 250000)}`;
+
+	const models = [
+		"~openai/gpt-latest",
+		"~google/gemini-pro-latest",
+		"~anthropic/claude-sonnet-latest",
+		"x-ai/grok-latest",
+		"deepseek/deepseek-latest",
+		"mistralai/mistral-latest",
+		"qwen/qwen-latest"
+	];
+
+	try {
+		const requests = models.map(model => {
+			const controller = new AbortController();
+			const timeoutId = setTimeout(() => controller.abort(), 15000);
+			return fetch("https://ai.hackclub.com/proxy/v1/chat/completions", {
+				method: "POST",
+				headers: {
+					"Authorization": `Bearer ${apiKey}`,
+					"Content-Type": "application/json"
+				},
+				body: JSON.stringify({
+					model,
+					messages: [{ role: "user", content: prompt }],
+					response_format: { type: "json_object" }
+				}),
+				signal: controller.signal
+			})
+			.then(async res => {
+				if (!res.ok) {
+					throw new Error(`HTTP ${res.status}: ${await res.text()}`);
+				}
+				const text = await res.text();
+				try {
+					return JSON.parse(text);
+				} catch (e) {
+					throw new Error(`Invalid JSON response: ${text.substring(0, 50)}...`);
+				}
+			})
+			.then(data => {
+				if (!data.choices?.[0]?.message?.content) {
+					throw new Error(`Unexpected API response: ${JSON.stringify(data).substring(0, 100)}...`);
+				}
+				const content = data.choices[0].message.content.trim();
+				const firstBrace = content.indexOf('{');
+				const lastBrace = content.lastIndexOf('}');
+				if (firstBrace === -1 || lastBrace === -1) {
+					throw new Error("No JSON object found in response");
+				}
+				const jsonString = content.substring(firstBrace, lastBrace + 1);
+				return JSON.parse(jsonString);
+			})
+			.catch(e => {
+				console.error(`Model ${model} failed:`, e);
+				return null;
+			})
+			.finally(() => clearTimeout(timeoutId));
+		});
+
+		const results = await Promise.all(requests);
+		const validResults = results.filter(r => r && typeof r.ai_probability === 'number');
+
+		if (validResults.length === 0) return null;
+
+		const totalProb = validResults.reduce((sum, r) => sum + r.ai_probability, 0);
+		const avgProb = Math.round(totalProb / validResults.length);
+		
+		const rawReasons = [...new Set(validResults.map(r => r.reason).filter(Boolean))].join(" | ");
+
+		let finalReason = rawReasons;
+		if (rawReasons.length > 0) {
+			const summaryPrompt = `Summarize these AI forensic code review notes into a single concise paragraph. Focus on the main consensus regarding whether the code is AI-generated slop or a genuine human effort.\n\nReviews:\n${rawReasons}`;
+			try {
+				const controller = new AbortController();
+				const timeoutId = setTimeout(() => controller.abort(), 15000);
+				try {
+					const summaryReq = await fetch("https://ai.hackclub.com/proxy/v1/chat/completions", {
+						method: "POST",
+						headers: {
+							"Authorization": `Bearer ${apiKey}`,
+							"Content-Type": "application/json"
+						},
+						body: JSON.stringify({
+							model: "~openai/gpt-mini-latest",
+							messages: [{ role: "user", content: summaryPrompt }]
+						}),
+						signal: controller.signal
+					});
+					if (!summaryReq.ok) {
+						throw new Error(`HTTP ${summaryReq.status}: ${await summaryReq.text()}`);
+					}
+					const summaryData = await summaryReq.json();
+					if (summaryData.choices?.[0]?.message?.content) {
+						finalReason = summaryData.choices[0].message.content.trim();
+					}
+				} finally {
+					clearTimeout(timeoutId);
+				}
+			} catch (e) {
+				console.error("Summary failed, using raw reasons", e);
+			}
+		}
+
+		return { ai_probability: avgProb, reason: finalReason };
+	} catch (e) {
+		console.error("Vibecoding ensemble check failed:", e);
+		return null;
+	}
+}
+
 async function applyLabels(result) {
 	await addLabels({ owner, repo, token, issueNumber: prNumber, labels: ["Submission"] });
 	const currentLabels = await getIssueLabels({ owner, repo, token, issueNumber: prNumber });
@@ -425,6 +639,12 @@ async function applyLabels(result) {
 		await addLabels({ owner, repo, token, issueNumber: prNumber, labels: ["Plagiarism Risk"] });
 	} else {
 		await removeLabel({ owner, repo, token, issueNumber: prNumber, label: "Plagiarism Risk" });
+	}
+
+	if (result.vibecoding && result.vibecoding.ai_probability >= 80) {
+		await addLabels({ owner, repo, token, issueNumber: prNumber, labels: ["AI Suspicion"] });
+	} else {
+		await removeLabel({ owner, repo, token, issueNumber: prNumber, label: "AI Suspicion" });
 	}
 }
 
@@ -532,12 +752,21 @@ ${result.ok ? "This submission is ready for human playtest." : "This submission 
 - File: ${result.gameFile ? `\`${result.gameFile}\`` : "not found"}
 - Similarity: ${formatPercent(result.similarity.score)}${result.similarity.match ? ` against \`${result.similarity.match}\`` : ""}
 
+${result.vibecoding ? `<details>
+<summary><b>AI Suspicion (AI Probability: ${result.vibecoding.ai_probability}%)</b></summary>
+
+**Consensus:** ${result.vibecoding.reason}
+</details>
+` : ""}
+
 #### Links
 ${links.join("\n")}
 
 ${checksSection}${warningLines.join("\n")}
 
 ${result.ok ? "Reviewers: please use the play link to playtest, then approve or request changes." : `@${pullRequest.user.login}: push fixes to this PR ([edit file](${editUrl})). These checks rerun automatically.`}
+
+> ℹ️ Authorized reviewers: post \`/check-ai\` to run a fresh AI analysis on the latest code.
 `;
 }
 
@@ -588,17 +817,7 @@ function validateSubmissionFiles(pullFiles, addCheck) {
 			: `Only one game file is allowed per submission. Found ${jsNames}.`
 	);
 
-	// EC9 fix: allow authors to modify their own game files (e.g. fixing requested changes)
-	// only flag if they are modifying files OUTSIDE the games/ folder
-	const changedNonAdded = pullFiles.filter((file) => file.status !== "added" && !file.filename.startsWith("games/"));
-	const changedNames = changedNonAdded.map((file) => `\`${file.filename}\``).join(", ");
-	addCheck(
-		"Only new or game files changed",
-		changedNonAdded.length === 0,
-		changedNonAdded.length
-			? `Submissions should only add new game files or modify existing ones in \`games/\`. These files outside \`games/\` were modified: ${changedNames}.`
-			: "All submitted files are new or inside \`games/\`."
-	);
+	// Redundant EC9 check removed as it's fully covered by 'Files stay in allowed folders'.
 	return { jsFiles, imageFiles };
 }
 
@@ -624,9 +843,10 @@ function validateImages(imageFiles, gameBase, owner, repo, pullRequest, addCheck
 	return null;
 }
 
-async function validateSingleGameFile(gameFile, workspace, addCheck, warnings) {
+async function validateSingleGameFile(gameFile, workspace, addCheck, warnings, skipAI = false) {
 	let metadata = null;
 	let similarity = { score: 0, match: null };
+	let vibecoding = null;
 
 	const filename = path.basename(gameFile.filename);
 	const gamePath = path.join(workspace, gameFile.filename);
@@ -677,5 +897,14 @@ async function validateSingleGameFile(gameFile, workspace, addCheck, warnings) {
 		warnings.push(`Similarity is ${formatPercent(similarity.score)} against \`${similarity.match}\`. A reviewer or lead should compare both games.`);
 	}
 
-	return { metadata, similarity };
+	if (!skipAI) {
+		vibecoding = await checkVibecoding(content);
+		if (vibecoding && vibecoding.ai_probability >= 80) {
+			warnings.push(`AI Generation Risk: ${vibecoding.ai_probability}% probability. Reason: ${vibecoding.reason}`);
+		}
+	} else {
+		console.log("Skipping AI check (synchronize event). Use /check-ai to trigger manually.");
+	}
+
+	return { metadata, similarity, vibecoding };
 }
