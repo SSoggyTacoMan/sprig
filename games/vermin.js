@@ -25,7 +25,7 @@ Sprig is tile-based and cannot use the original PNG screen layers directly.\
 This version translates the original LCD logic and uses hand-converted 16x16 LCD silhouettes.\
 */\
 \
-const S_BG = "X";\
+const S_BG = "W";\
 const S_HOLE = "V";\
 const S_MAN1 = "a";\
 const S_MAN2 = "b";\
