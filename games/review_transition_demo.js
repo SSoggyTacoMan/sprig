@@ -32,4 +32,4 @@ setMap(map`
   p g p
   p p p
 `);
-onInput("w", () => { level += 1; });
+onInput("w", () => { level += 2; });
