@@ -11,6 +11,7 @@
 @author: SSoggyTacoMan
 @tags: ["test", "vermin"]
 @addedOn: 2026-09-11
+*/
 \
 Controls:\
 A / D = move left / right\
