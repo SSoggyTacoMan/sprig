@@ -8,7 +8,9 @@
 \f0\fs24 \cf0 /*\
 @title: Pocket Vermin LCD\
 @description: Sprig remake of Vermin with LCD-style timing, bursts, misses, and five-lane mole logic.\
-@author: your_name\
+@author: SSoggyTacoMan\
+@tags: ['test', 'review']\
+@addedOn: 2026-09-11\
 \
 Controls:\
 A / D = move left / right\
